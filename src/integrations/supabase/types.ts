@@ -14,7 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          is_preset: boolean
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_preset?: boolean
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_preset?: boolean
+          name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          amount_in_trip_currency: number
+          category_id: string | null
+          created_at: string
+          currency: string
+          fx_rate_to_trip: number
+          id: string
+          kind: string
+          note: string | null
+          spent_at: string
+          trip_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          amount_in_trip_currency: number
+          category_id?: string | null
+          created_at?: string
+          currency: string
+          fx_rate_to_trip?: number
+          id?: string
+          kind?: string
+          note?: string | null
+          spent_at?: string
+          trip_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          amount_in_trip_currency?: number
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          fx_rate_to_trip?: number
+          id?: string
+          kind?: string
+          note?: string | null
+          spent_at?: string
+          trip_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          default_currency: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_currency?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_currency?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trips: {
+        Row: {
+          budget_amount: number
+          created_at: string
+          currency: string
+          destination: string | null
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget_amount?: number
+          created_at?: string
+          currency?: string
+          destination?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget_amount?: number
+          created_at?: string
+          currency?: string
+          destination?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
