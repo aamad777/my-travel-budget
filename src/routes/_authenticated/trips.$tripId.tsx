@@ -97,16 +97,23 @@ function TripDetail() {
   const pct = trip && Number(trip.budget_amount) > 0
     ? (totals.spent / Number(trip.budget_amount)) * 100 : 0;
 
+  const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
+
+  const filteredExpenses = useMemo(
+    () => (filter === "all" ? expenses : expenses.filter((e) => e.kind === filter)),
+    [expenses, filter],
+  );
+
   const grouped = useMemo(() => {
     const map = new Map<string, Expense[]>();
-    for (const e of expenses) {
+    for (const e of filteredExpenses) {
       const day = e.spent_at.slice(0, 10);
       const list = map.get(day) ?? [];
       list.push(e);
       map.set(day, list);
     }
     return Array.from(map.entries());
-  }, [expenses]);
+  }, [filteredExpenses]);
 
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
@@ -196,10 +203,25 @@ function TripDetail() {
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold">Activity</h2>
-        {!expenses.length ? (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Activity</h2>
+          <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
+            {(["all", "expense", "income"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`rounded-full px-3 py-1 capitalize transition-colors ${
+                  filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {f === "all" ? "All" : f === "expense" ? "− Expenses" : "+ Income"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {!filteredExpenses.length ? (
           <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
-            No expenses yet. Tap + to add one.
+            {expenses.length ? "Nothing matches this filter." : "No expenses yet. Tap + to add one."}
           </div>
         ) : (
           <div className="space-y-5">
@@ -365,16 +387,26 @@ function QuickAddSheet({
 
           <div>
             <Label>Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger><SelectValue placeholder="Pick a category" /></SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}{!c.is_preset && " (custom)"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {categories.map((c) => {
+                const active = categoryId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCategoryId(c.id)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? "border-transparent text-primary-foreground shadow-sm"
+                        : "border-border bg-card/60 text-foreground hover:bg-card"
+                    }`}
+                    style={active ? { backgroundColor: c.color ?? "var(--primary)" } : undefined}
+                  >
+                    {c.name}{!c.is_preset && " ✦"}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>
