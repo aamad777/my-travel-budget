@@ -27,6 +27,7 @@ export const CURRENCIES = [
   { code: "COP", symbol: "CO$", name: "Colombian Peso" },
   { code: "ZAR", symbol: "R", name: "South African Rand" },
   { code: "AED", symbol: "د.إ", name: "UAE Dirham" },
+  { code: "JOD", symbol: "د.ا", name: "Jordanian Dinar" },
   { code: "SAR", symbol: "﷼", name: "Saudi Riyal" },
   { code: "TRY", symbol: "₺", name: "Turkish Lira" },
   { code: "PLN", symbol: "zł", name: "Polish Zloty" },
