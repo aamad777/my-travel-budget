@@ -203,10 +203,25 @@ function TripDetail() {
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold">Activity</h2>
-        {!expenses.length ? (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Activity</h2>
+          <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
+            {(["all", "expense", "income"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`rounded-full px-3 py-1 capitalize transition-colors ${
+                  filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {f === "all" ? "All" : f === "expense" ? "− Expenses" : "+ Income"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {!filteredExpenses.length ? (
           <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
-            No expenses yet. Tap + to add one.
+            {expenses.length ? "Nothing matches this filter." : "No expenses yet. Tap + to add one."}
           </div>
         ) : (
           <div className="space-y-5">
