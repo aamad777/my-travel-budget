@@ -97,16 +97,23 @@ function TripDetail() {
   const pct = trip && Number(trip.budget_amount) > 0
     ? (totals.spent / Number(trip.budget_amount)) * 100 : 0;
 
+  const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
+
+  const filteredExpenses = useMemo(
+    () => (filter === "all" ? expenses : expenses.filter((e) => e.kind === filter)),
+    [expenses, filter],
+  );
+
   const grouped = useMemo(() => {
     const map = new Map<string, Expense[]>();
-    for (const e of expenses) {
+    for (const e of filteredExpenses) {
       const day = e.spent_at.slice(0, 10);
       const list = map.get(day) ?? [];
       list.push(e);
       map.set(day, list);
     }
     return Array.from(map.entries());
-  }, [expenses]);
+  }, [filteredExpenses]);
 
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
