@@ -44,6 +44,41 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          expense_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description: string
+          expense_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          expense_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_items_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
