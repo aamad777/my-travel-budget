@@ -409,6 +409,31 @@ function QuickAddSheet({
             </div>
           </div>
 
+          <div className="rounded-xl border border-border bg-card/40 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Convert to</Label>
+              <Select value={previewCurrency} onValueChange={setPreviewCurrency}>
+                <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-lg font-semibold">
+              {previewAmount != null
+                ? <>= {formatMoney(previewAmount, previewCurrency)}</>
+                : <span className="text-muted-foreground text-sm">{previewLoading ? "Fetching rate…" : "Enter an amount to see equivalent"}</span>}
+            </div>
+            {previewRate != null && currency !== previewCurrency && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                1 {currency} = {previewRate.toFixed(4)} {previewCurrency}
+              </div>
+            )}
+          </div>
+
+
           <div>
             <Label>Category</Label>
             <div className="mt-2 flex flex-wrap gap-2">
