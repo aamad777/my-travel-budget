@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -297,8 +297,32 @@ function QuickAddSheet({
   const [note, setNote] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+  const [previewCurrency, setPreviewCurrency] = useState(tripCurrency);
+  const [previewRate, setPreviewRate] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const isExpense = kind === "expense";
+
+  // Live conversion preview: convert entered amount (in `currency`) into `previewCurrency`.
+  useEffect(() => {
+    let cancelled = false;
+    if (currency === previewCurrency) {
+      setPreviewRate(1);
+      return;
+    }
+    setPreviewLoading(true);
+    fetchFx({ data: { from: currency, to: previewCurrency } })
+      .then((r) => { if (!cancelled) setPreviewRate(r.rate); })
+      .catch(() => { if (!cancelled) setPreviewRate(null); })
+      .finally(() => { if (!cancelled) setPreviewLoading(false); });
+    return () => { cancelled = true; };
+  }, [currency, previewCurrency, fetchFx]);
+
+  const previewAmount = useMemo(() => {
+    const n = parseFloat(amount);
+    if (!isFinite(n) || n <= 0 || previewRate == null) return null;
+    return Math.round(n * previewRate * 100) / 100;
+  }, [amount, previewRate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -384,6 +408,31 @@ function QuickAddSheet({
               </Select>
             </div>
           </div>
+
+          <div className="rounded-xl border border-border bg-card/40 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Convert to</Label>
+              <Select value={previewCurrency} onValueChange={setPreviewCurrency}>
+                <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-lg font-semibold">
+              {previewAmount != null
+                ? <>= {formatMoney(previewAmount, previewCurrency)}</>
+                : <span className="text-muted-foreground text-sm">{previewLoading ? "Fetching rate…" : "Enter an amount to see equivalent"}</span>}
+            </div>
+            {previewRate != null && currency !== previewCurrency && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                1 {currency} = {previewRate.toFixed(4)} {previewCurrency}
+              </div>
+            )}
+          </div>
+
 
           <div>
             <Label>Category</Label>
