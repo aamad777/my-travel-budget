@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { CURRENCIES, formatMoney } from "@/lib/currencies";
 import { BudgetRing } from "@/routes/index";
-import { Plus, Minus, ArrowLeft, BarChart3, Trash2, MapPin, Calendar } from "lucide-react";
+import { Plus, Minus, ArrowLeft, BarChart3, Trash2, MapPin, Calendar, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 
