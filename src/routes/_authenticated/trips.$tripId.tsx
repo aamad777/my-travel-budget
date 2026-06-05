@@ -68,11 +68,11 @@ function TripDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
-        .select("id,amount,currency,amount_in_trip_currency,fx_rate_to_trip,category_id,note,spent_at,kind")
+        .select("id,amount,currency,amount_in_trip_currency,fx_rate_to_trip,category_id,note,spent_at,kind,expense_items(id,expense_id,description,amount)")
         .eq("trip_id", tripId)
         .order("spent_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Expense[];
+      return (data ?? []) as unknown as Expense[];
     },
   });
 
@@ -248,31 +248,45 @@ function TripDetail() {
                     {items.map((e, i) => {
                       const cat = e.category_id ? catById[e.category_id] : null;
                       return (
-                        <div key={e.id} className={`flex items-center gap-3 px-4 py-3 ${i > 0 ? "border-t border-border/40" : ""}`}>
-                          <span
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
-                            style={{ backgroundColor: (cat?.color ?? "#5cbdb9") + "33", color: cat?.color ?? "#5cbdb9" }}
-                          >
-                            {cat?.name?.[0] ?? "·"}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium">{e.note || cat?.name || (e.kind === "income" ? "Income" : "Expense")}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {cat?.name ?? "Uncategorized"}
-                              {e.currency !== trip.currency && ` · ${formatMoney(Number(e.amount), e.currency)}`}
+                        <div key={e.id} className={`${i > 0 ? "border-t border-border/40" : ""}`}>
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <span
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
+                              style={{ backgroundColor: (cat?.color ?? "#5cbdb9") + "33", color: cat?.color ?? "#5cbdb9" }}
+                            >
+                              {cat?.name?.[0] ?? "·"}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium">{e.note || cat?.name || (e.kind === "income" ? "Income" : "Expense")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {cat?.name ?? "Uncategorized"}
+                                {e.currency !== trip.currency && ` · ${formatMoney(Number(e.amount), e.currency)}`}
+                              </div>
                             </div>
+                            <div className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}>
+                              {e.kind === "income" ? "+" : "−"}
+                              {formatMoney(Number(e.amount_in_trip_currency), trip.currency)}
+                            </div>
+                            <button
+                              onClick={() => deleteMut.mutate(e.id)}
+                              className="ml-1 rounded p-1 text-muted-foreground hover:text-destructive"
+                              aria-label="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
-                          <div className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}>
-                            {e.kind === "income" ? "+" : "−"}
-                            {formatMoney(Number(e.amount_in_trip_currency), trip.currency)}
-                          </div>
-                          <button
-                            onClick={() => deleteMut.mutate(e.id)}
-                            className="ml-1 rounded p-1 text-muted-foreground hover:text-destructive"
-                            aria-label="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {e.expense_items && e.expense_items.length > 0 && (
+                            <div className="px-4 pb-3">
+                              <div className="ml-12 space-y-1 rounded-xl bg-muted/30 px-3 py-2">
+                                {e.expense_items.map((item) => (
+                                  <div key={item.id} className="flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground">{item.description}</span>
+                                    <span className="font-medium">{formatMoney(Number(item.amount), e.currency)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -308,10 +322,10 @@ function QuickAddSheet({
   const [previewCurrency, setPreviewCurrency] = useState(tripCurrency);
   const [previewRate, setPreviewRate] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [items, setItems] = useState<{ description: string; amount: string }[]>([]);
 
   const isExpense = kind === "expense";
 
-  // Live conversion preview: convert entered amount (in `currency`) into `previewCurrency`.
   useEffect(() => {
     let cancelled = false;
     if (currency === previewCurrency) {
@@ -332,6 +346,23 @@ function QuickAddSheet({
     return Math.round(n * previewRate * 100) / 100;
   }, [amount, previewRate]);
 
+  const itemsTotal = useMemo(() => {
+    return items.reduce((s, it) => {
+      const v = parseFloat(it.amount);
+      return s + (isFinite(v) && v > 0 ? v : 0);
+    }, 0);
+  }, [items]);
+
+  const addItem = () => setItems((prev) => [...prev, { description: "", amount: "" }]);
+  const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  const updateItem = (idx: number, field: "description" | "amount", value: string) => {
+    setItems((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const n = parseFloat(amount);
@@ -347,7 +378,7 @@ function QuickAddSheet({
       const converted = Math.round(n * rate * 100) / 100;
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase.from("expenses").insert({
+      const { data: inserted, error } = await supabase.from("expenses").insert({
         trip_id: tripId,
         user_id: u.user.id,
         amount: n,
@@ -358,12 +389,26 @@ function QuickAddSheet({
         note: note.trim() || null,
         spent_at: new Date(date + "T12:00:00").toISOString(),
         kind,
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      const validItems = items.filter(it => it.description.trim() && parseFloat(it.amount) > 0);
+      if (validItems.length > 0) {
+        const { error: itemErr } = await supabase.from("expense_items").insert(
+          validItems.map(it => ({
+            expense_id: inserted.id,
+            user_id: u.user!.id,
+            description: it.description.trim(),
+            amount: parseFloat(it.amount),
+          }))
+        );
+        if (itemErr) throw itemErr;
+      }
+
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["trips"] });
       toast.success(isExpense ? "Expense added" : "Income added");
-      setAmount(""); setNote("");
+      setAmount(""); setNote(""); setItems([]);
       setOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
@@ -441,7 +486,6 @@ function QuickAddSheet({
             )}
           </div>
 
-
           <div>
             <Label>Category</Label>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -469,6 +513,50 @@ function QuickAddSheet({
           <div>
             <Label htmlFor="note">Note (optional)</Label>
             <Textarea id="note" rows={2} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What was this for?" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Breakdown (optional)</Label>
+              <span className="text-xs text-muted-foreground">
+                {itemsTotal > 0 ? `Items total: ${formatMoney(itemsTotal, currency)}` : ""}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {items.map((it, idx) => (
+                <div key={idx} className="grid grid-cols-[1fr_100px_32px] gap-2">
+                  <Input
+                    placeholder="e.g. tomatoes, bag..."
+                    value={it.description}
+                    onChange={(e) => updateItem(idx, "description", e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={it.amount}
+                    onChange={(e) => updateItem(idx, "amount", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    className="flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={addItem} className="text-xs">
+              <Plus className="mr-1 h-3 w-3" /> Add item
+            </Button>
+            {itemsTotal > 0 && parseFloat(amount) > 0 && Math.abs(itemsTotal - parseFloat(amount)) > 0.01 && (
+              <div className="text-xs text-amber-400">
+                Item total ({formatMoney(itemsTotal, currency)}) doesn't match entered amount ({formatMoney(parseFloat(amount), currency)})
+              </div>
+            )}
           </div>
 
           <div>
