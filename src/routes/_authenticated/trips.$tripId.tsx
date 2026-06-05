@@ -23,6 +23,13 @@ export const Route = createFileRoute("/_authenticated/trips/$tripId")({
   component: TripDetail,
 });
 
+type ExpenseItem = {
+  id: string;
+  expense_id: string;
+  description: string;
+  amount: number;
+};
+
 type Expense = {
   id: string;
   amount: number;
@@ -33,6 +40,7 @@ type Expense = {
   note: string | null;
   spent_at: string;
   kind: "expense" | "income";
+  expense_items: ExpenseItem[] | null;
 };
 
 type Category = { id: string; name: string; icon: string; color: string; is_preset: boolean };
