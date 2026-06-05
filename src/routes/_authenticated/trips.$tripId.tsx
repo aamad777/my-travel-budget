@@ -297,8 +297,32 @@ function QuickAddSheet({
   const [note, setNote] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+  const [previewCurrency, setPreviewCurrency] = useState(tripCurrency);
+  const [previewRate, setPreviewRate] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const isExpense = kind === "expense";
+
+  // Live conversion preview: convert entered amount (in `currency`) into `previewCurrency`.
+  useEffect(() => {
+    let cancelled = false;
+    if (currency === previewCurrency) {
+      setPreviewRate(1);
+      return;
+    }
+    setPreviewLoading(true);
+    fetchFx({ data: { from: currency, to: previewCurrency } })
+      .then((r) => { if (!cancelled) setPreviewRate(r.rate); })
+      .catch(() => { if (!cancelled) setPreviewRate(null); })
+      .finally(() => { if (!cancelled) setPreviewLoading(false); });
+    return () => { cancelled = true; };
+  }, [currency, previewCurrency, fetchFx]);
+
+  const previewAmount = useMemo(() => {
+    const n = parseFloat(amount);
+    if (!isFinite(n) || n <= 0 || previewRate == null) return null;
+    return Math.round(n * previewRate * 100) / 100;
+  }, [amount, previewRate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
