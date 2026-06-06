@@ -658,3 +658,57 @@ function QuickAddSheet({
     </Sheet>
   );
 }
+
+function InlineItemAdder({ expenseId, currency }: { expenseId: string; currency: string }) {
+  const qc = useQueryClient();
+  const [desc, setDesc] = useState("");
+  const [amt, setAmt] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const add = async () => {
+    const n = parseFloat(amt);
+    if (!desc.trim() || !isFinite(n) || n <= 0) return toast.error("Enter description and amount");
+    setSaving(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("expense_items").insert({
+        expense_id: expenseId,
+        user_id: u.user.id,
+        description: desc.trim(),
+        amount: n,
+      });
+      if (error) throw error;
+      setDesc(""); setAmt("");
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 pt-1">
+      <Input
+        value={desc}
+        onChange={(e) => setDesc(e.target.value)}
+        placeholder={`Add item in ${currency}…`}
+        className="h-7 flex-1 text-xs"
+      />
+      <Input
+        value={amt}
+        onChange={(e) => setAmt(e.target.value)}
+        type="number"
+        inputMode="decimal"
+        step="0.01"
+        min="0"
+        placeholder="0.00"
+        className="h-7 w-20 text-xs"
+      />
+      <Button type="button" size="sm" variant="secondary" className="h-7 px-2" onClick={add} disabled={saving}>
+        <Plus className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+}
