@@ -175,6 +175,7 @@ function TripDetail() {
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
   const [open, setOpen] = useState<null | "expense" | "income">(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
@@ -185,6 +186,16 @@ function TripDetail() {
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["trips"] });
       toast.success("Deleted");
+    },
+  });
+
+  const deleteItemMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("expense_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["expenses", tripId] });
     },
   });
 
