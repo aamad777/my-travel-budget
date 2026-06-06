@@ -297,6 +297,8 @@ function TripDetail() {
                     {items.map((e, i) => {
                       const cat = e.category_id ? catById[e.category_id] : null;
                       const Icon = iconForCategory(cat?.name);
+                      const hasItems = !!e.expense_items && e.expense_items.length > 0;
+                      const isOpen = expandedId === e.id;
                       return (
                         <div key={e.id} className={`${i > 0 ? "border-t border-border/40" : ""}`}>
                           <div className="flex items-center gap-3 px-4 py-3">
@@ -311,12 +313,21 @@ function TripDetail() {
                               <div className="text-xs text-muted-foreground">
                                 {cat?.name ?? "Uncategorized"}
                                 {e.currency !== trip.currency && ` · ${formatMoney(Number(e.amount), e.currency)}`}
+                                {hasItems && ` · ${e.expense_items!.length} item${e.expense_items!.length > 1 ? "s" : ""}`}
                               </div>
                             </div>
                             <div className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}>
                               {e.kind === "income" ? "+" : "−"}
                               {formatMoney(Number(e.amount_in_trip_currency), trip.currency)}
                             </div>
+                            <button
+                              onClick={() => setExpandedId(isOpen ? null : e.id)}
+                              className="ml-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                              aria-label={isOpen ? "Hide breakdown" : "Add or view breakdown"}
+                              title="Breakdown"
+                            >
+                              {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                            </button>
                             <button
                               onClick={() => deleteMut.mutate(e.id)}
                               className="ml-1 rounded p-1 text-muted-foreground hover:text-destructive"
@@ -325,15 +336,27 @@ function TripDetail() {
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-                          {e.expense_items && e.expense_items.length > 0 && (
+                          {(hasItems || isOpen) && (
                             <div className="px-4 pb-3">
-                              <div className="ml-12 space-y-1 rounded-xl bg-muted/30 px-3 py-2">
-                                {e.expense_items.map((item) => (
-                                  <div key={item.id} className="flex items-center justify-between text-xs">
-                                    <span className="text-muted-foreground">{item.description}</span>
+                              <div className="ml-12 space-y-2 rounded-xl bg-muted/30 px-3 py-2">
+                                {e.expense_items?.map((item) => (
+                                  <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
+                                    <span className="flex-1 truncate text-muted-foreground">{item.description}</span>
                                     <span className="font-medium">{formatMoney(Number(item.amount), e.currency)}</span>
+                                    {isOpen && (
+                                      <button
+                                        onClick={() => deleteItemMut.mutate(item.id)}
+                                        className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                        aria-label="Remove item"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    )}
                                   </div>
                                 ))}
+                                {isOpen && (
+                                  <InlineItemAdder expenseId={e.id} currency={e.currency} />
+                                )}
                               </div>
                             </div>
                           )}
