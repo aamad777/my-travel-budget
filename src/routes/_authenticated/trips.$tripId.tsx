@@ -52,6 +52,48 @@ type Expense = {
 
 type Category = { id: string; name: string; icon: string; color: string; is_preset: boolean };
 
+const CATEGORY_ICON_MAP: { match: RegExp; icon: LucideIcon }[] = [
+  { match: /coffee|cafe|tea/i, icon: Coffee },
+  { match: /beer|bar|drink|alcohol|wine|pub/i, icon: Beer },
+  { match: /food|meal|restaurant|eat|dining|grocer/i, icon: Utensils },
+  { match: /flight|plane|air/i, icon: Plane },
+  { match: /train|rail|metro|subway/i, icon: Train },
+  { match: /boat|ferry|cruise|ship/i, icon: Ship },
+  { match: /fuel|gas|petrol/i, icon: Fuel },
+  { match: /car|taxi|uber|rental|drive/i, icon: Car },
+  { match: /bus|transport|transit|commut/i, icon: Bus },
+  { match: /hotel|lodg|stay|hostel|airbnb|accommod|room/i, icon: BedDouble },
+  { match: /activit|tour|ticket|event|attraction|museum/i, icon: Ticket },
+  { match: /movie|cinema|film/i, icon: Film },
+  { match: /music|concert/i, icon: Music },
+  { match: /photo|camera/i, icon: Camera },
+  { match: /shop|store|mall|market/i, icon: ShoppingBag },
+  { match: /cloth|shirt|wear|fashion/i, icon: Shirt },
+  { match: /gift|present/i, icon: Gift },
+  { match: /health|medic|pharma/i, icon: HeartPulse },
+  { match: /doctor|hospital|clinic/i, icon: Stethoscope },
+  { match: /wifi|internet|data/i, icon: Wifi },
+  { match: /phone|sim|call/i, icon: Phone },
+  { match: /gym|fitness|sport/i, icon: Dumbbell },
+  { match: /pet|dog|cat/i, icon: PawPrint },
+  { match: /baby|kid|child/i, icon: Baby },
+  { match: /repair|fix|service/i, icon: Wrench },
+  { match: /cash|withdraw|atm|bank/i, icon: Banknote },
+  { match: /card|fee/i, icon: CreditCard },
+  { match: /saving|deposit/i, icon: PiggyBank },
+  { match: /work|business|office/i, icon: Briefcase },
+  { match: /school|educat|course|class/i, icon: GraduationCap },
+  { match: /other|misc/i, icon: Sparkles },
+];
+
+function iconForCategory(name?: string | null): LucideIcon {
+  if (!name) return Tag;
+  for (const { match, icon } of CATEGORY_ICON_MAP) {
+    if (match.test(name)) return icon;
+  }
+  return Tag;
+}
+
 function TripDetail() {
   const { tripId } = Route.useParams();
   const navigate = useNavigate();
