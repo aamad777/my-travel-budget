@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/sheet";
 import { CURRENCIES, formatMoney } from "@/lib/currencies";
 import { BudgetRing } from "@/routes/index";
-import { Plus, Minus, ArrowLeft, BarChart3, Trash2, MapPin, Calendar, X } from "lucide-react";
+import {
+  Plus, Minus, ArrowLeft, BarChart3, Trash2, MapPin, Calendar, X,
+  Utensils, Bus, BedDouble, Ticket, ShoppingBag, Sparkles, Coffee, Beer,
+  Plane, Car, Fuel, Train, Ship, Gift, HeartPulse, Stethoscope, Wifi,
+  Phone, Film, Music, Camera, Dumbbell, PawPrint, Baby, Shirt, Wrench,
+  Banknote, CreditCard, PiggyBank, Briefcase, GraduationCap, Tag,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 
