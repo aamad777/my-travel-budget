@@ -296,14 +296,15 @@ function TripDetail() {
                   <div className="overflow-hidden rounded-2xl border border-border bg-card/60">
                     {items.map((e, i) => {
                       const cat = e.category_id ? catById[e.category_id] : null;
+                      const Icon = iconForCategory(cat?.name);
                       return (
                         <div key={e.id} className={`${i > 0 ? "border-t border-border/40" : ""}`}>
                           <div className="flex items-center gap-3 px-4 py-3">
                             <span
-                              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
+                              className="flex h-9 w-9 items-center justify-center rounded-full"
                               style={{ backgroundColor: (cat?.color ?? "#5cbdb9") + "33", color: cat?.color ?? "#5cbdb9" }}
                             >
-                              {cat?.name?.[0] ?? "·"}
+                              <Icon className="h-4 w-4" />
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="truncate font-medium">{e.note || cat?.name || (e.kind === "income" ? "Income" : "Expense")}</div>
