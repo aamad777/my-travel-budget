@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/sheet";
 import { CURRENCIES, formatMoney } from "@/lib/currencies";
 import { BudgetRing } from "@/routes/index";
-import { Plus, Minus, ArrowLeft, BarChart3, Trash2, MapPin, Calendar, X } from "lucide-react";
+import {
+  Plus, Minus, ArrowLeft, BarChart3, Trash2, MapPin, Calendar, X,
+  Utensils, Bus, BedDouble, Ticket, ShoppingBag, Sparkles, Coffee, Beer,
+  Plane, Car, Fuel, Train, Ship, Gift, HeartPulse, Stethoscope, Wifi,
+  Phone, Film, Music, Camera, Dumbbell, PawPrint, Baby, Shirt, Wrench,
+  Banknote, CreditCard, PiggyBank, Briefcase, GraduationCap, Tag,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 
@@ -44,6 +51,48 @@ type Expense = {
 };
 
 type Category = { id: string; name: string; icon: string; color: string; is_preset: boolean };
+
+const CATEGORY_ICON_MAP: { match: RegExp; icon: LucideIcon }[] = [
+  { match: /coffee|cafe|tea/i, icon: Coffee },
+  { match: /beer|bar|drink|alcohol|wine|pub/i, icon: Beer },
+  { match: /food|meal|restaurant|eat|dining|grocer/i, icon: Utensils },
+  { match: /flight|plane|air/i, icon: Plane },
+  { match: /train|rail|metro|subway/i, icon: Train },
+  { match: /boat|ferry|cruise|ship/i, icon: Ship },
+  { match: /fuel|gas|petrol/i, icon: Fuel },
+  { match: /car|taxi|uber|rental|drive/i, icon: Car },
+  { match: /bus|transport|transit|commut/i, icon: Bus },
+  { match: /hotel|lodg|stay|hostel|airbnb|accommod|room/i, icon: BedDouble },
+  { match: /activit|tour|ticket|event|attraction|museum/i, icon: Ticket },
+  { match: /movie|cinema|film/i, icon: Film },
+  { match: /music|concert/i, icon: Music },
+  { match: /photo|camera/i, icon: Camera },
+  { match: /shop|store|mall|market/i, icon: ShoppingBag },
+  { match: /cloth|shirt|wear|fashion/i, icon: Shirt },
+  { match: /gift|present/i, icon: Gift },
+  { match: /health|medic|pharma/i, icon: HeartPulse },
+  { match: /doctor|hospital|clinic/i, icon: Stethoscope },
+  { match: /wifi|internet|data/i, icon: Wifi },
+  { match: /phone|sim|call/i, icon: Phone },
+  { match: /gym|fitness|sport/i, icon: Dumbbell },
+  { match: /pet|dog|cat/i, icon: PawPrint },
+  { match: /baby|kid|child/i, icon: Baby },
+  { match: /repair|fix|service/i, icon: Wrench },
+  { match: /cash|withdraw|atm|bank/i, icon: Banknote },
+  { match: /card|fee/i, icon: CreditCard },
+  { match: /saving|deposit/i, icon: PiggyBank },
+  { match: /work|business|office/i, icon: Briefcase },
+  { match: /school|educat|course|class/i, icon: GraduationCap },
+  { match: /other|misc/i, icon: Sparkles },
+];
+
+function iconForCategory(name?: string | null): LucideIcon {
+  if (!name) return Tag;
+  for (const { match, icon } of CATEGORY_ICON_MAP) {
+    if (match.test(name)) return icon;
+  }
+  return Tag;
+}
 
 function TripDetail() {
   const { tripId } = Route.useParams();
@@ -247,14 +296,15 @@ function TripDetail() {
                   <div className="overflow-hidden rounded-2xl border border-border bg-card/60">
                     {items.map((e, i) => {
                       const cat = e.category_id ? catById[e.category_id] : null;
+                      const Icon = iconForCategory(cat?.name);
                       return (
                         <div key={e.id} className={`${i > 0 ? "border-t border-border/40" : ""}`}>
                           <div className="flex items-center gap-3 px-4 py-3">
                             <span
-                              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
+                              className="flex h-9 w-9 items-center justify-center rounded-full"
                               style={{ backgroundColor: (cat?.color ?? "#5cbdb9") + "33", color: cat?.color ?? "#5cbdb9" }}
                             >
-                              {cat?.name?.[0] ?? "·"}
+                              <Icon className="h-4 w-4" />
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="truncate font-medium">{e.note || cat?.name || (e.kind === "income" ? "Income" : "Expense")}</div>
@@ -491,18 +541,20 @@ function QuickAddSheet({
             <div className="mt-2 flex flex-wrap gap-2">
               {categories.map((c) => {
                 const active = categoryId === c.id;
+                const Icon = iconForCategory(c.name);
                 return (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => setCategoryId(c.id)}
-                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                       active
                         ? "border-transparent text-primary-foreground shadow-sm"
                         : "border-border bg-card/60 text-foreground hover:bg-card"
                     }`}
                     style={active ? { backgroundColor: c.color ?? "var(--primary)" } : undefined}
                   >
+                    <Icon className="h-3.5 w-3.5" />
                     {c.name}{!c.is_preset && " ✦"}
                   </button>
                 );
