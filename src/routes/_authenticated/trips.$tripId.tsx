@@ -175,6 +175,7 @@ function TripDetail() {
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
   const [open, setOpen] = useState<null | "expense" | "income">(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
@@ -185,6 +186,16 @@ function TripDetail() {
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["trips"] });
       toast.success("Deleted");
+    },
+  });
+
+  const deleteItemMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("expense_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["expenses", tripId] });
     },
   });
 
@@ -297,6 +308,8 @@ function TripDetail() {
                     {items.map((e, i) => {
                       const cat = e.category_id ? catById[e.category_id] : null;
                       const Icon = iconForCategory(cat?.name);
+                      const hasItems = !!e.expense_items && e.expense_items.length > 0;
+                      const isOpen = expandedId === e.id;
                       return (
                         <div key={e.id} className={`${i > 0 ? "border-t border-border/40" : ""}`}>
                           <div className="flex items-center gap-3 px-4 py-3">
@@ -311,12 +324,21 @@ function TripDetail() {
                               <div className="text-xs text-muted-foreground">
                                 {cat?.name ?? "Uncategorized"}
                                 {e.currency !== trip.currency && ` · ${formatMoney(Number(e.amount), e.currency)}`}
+                                {hasItems && ` · ${e.expense_items!.length} item${e.expense_items!.length > 1 ? "s" : ""}`}
                               </div>
                             </div>
                             <div className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}>
                               {e.kind === "income" ? "+" : "−"}
                               {formatMoney(Number(e.amount_in_trip_currency), trip.currency)}
                             </div>
+                            <button
+                              onClick={() => setExpandedId(isOpen ? null : e.id)}
+                              className="ml-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                              aria-label={isOpen ? "Hide breakdown" : "Add or view breakdown"}
+                              title="Breakdown"
+                            >
+                              {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                            </button>
                             <button
                               onClick={() => deleteMut.mutate(e.id)}
                               className="ml-1 rounded p-1 text-muted-foreground hover:text-destructive"
@@ -325,15 +347,27 @@ function TripDetail() {
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-                          {e.expense_items && e.expense_items.length > 0 && (
+                          {(hasItems || isOpen) && (
                             <div className="px-4 pb-3">
-                              <div className="ml-12 space-y-1 rounded-xl bg-muted/30 px-3 py-2">
-                                {e.expense_items.map((item) => (
-                                  <div key={item.id} className="flex items-center justify-between text-xs">
-                                    <span className="text-muted-foreground">{item.description}</span>
+                              <div className="ml-12 space-y-2 rounded-xl bg-muted/30 px-3 py-2">
+                                {e.expense_items?.map((item) => (
+                                  <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
+                                    <span className="flex-1 truncate text-muted-foreground">{item.description}</span>
                                     <span className="font-medium">{formatMoney(Number(item.amount), e.currency)}</span>
+                                    {isOpen && (
+                                      <button
+                                        onClick={() => deleteItemMut.mutate(item.id)}
+                                        className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                        aria-label="Remove item"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    )}
                                   </div>
                                 ))}
+                                {isOpen && (
+                                  <InlineItemAdder expenseId={e.id} currency={e.currency} />
+                                )}
                               </div>
                             </div>
                           )}
@@ -622,5 +656,59 @@ function QuickAddSheet({
         </form>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function InlineItemAdder({ expenseId, currency }: { expenseId: string; currency: string }) {
+  const qc = useQueryClient();
+  const [desc, setDesc] = useState("");
+  const [amt, setAmt] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const add = async () => {
+    const n = parseFloat(amt);
+    if (!desc.trim() || !isFinite(n) || n <= 0) return toast.error("Enter description and amount");
+    setSaving(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const { error } = await supabase.from("expense_items").insert({
+        expense_id: expenseId,
+        user_id: u.user.id,
+        description: desc.trim(),
+        amount: n,
+      });
+      if (error) throw error;
+      setDesc(""); setAmt("");
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 pt-1">
+      <Input
+        value={desc}
+        onChange={(e) => setDesc(e.target.value)}
+        placeholder={`Add item in ${currency}…`}
+        className="h-7 flex-1 text-xs"
+      />
+      <Input
+        value={amt}
+        onChange={(e) => setAmt(e.target.value)}
+        type="number"
+        inputMode="decimal"
+        step="0.01"
+        min="0"
+        placeholder="0.00"
+        className="h-7 w-20 text-xs"
+      />
+      <Button type="button" size="sm" variant="secondary" className="h-7 px-2" onClick={add} disabled={saving}>
+        <Plus className="h-3 w-3" />
+      </Button>
+    </div>
   );
 }
