@@ -541,18 +541,20 @@ function QuickAddSheet({
             <div className="mt-2 flex flex-wrap gap-2">
               {categories.map((c) => {
                 const active = categoryId === c.id;
+                const Icon = iconForCategory(c.name);
                 return (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => setCategoryId(c.id)}
-                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                       active
                         ? "border-transparent text-primary-foreground shadow-sm"
                         : "border-border bg-card/60 text-foreground hover:bg-card"
                     }`}
                     style={active ? { backgroundColor: c.color ?? "var(--primary)" } : undefined}
                   >
+                    <Icon className="h-3.5 w-3.5" />
                     {c.name}{!c.is_preset && " ✦"}
                   </button>
                 );
