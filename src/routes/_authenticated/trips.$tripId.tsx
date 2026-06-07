@@ -295,22 +295,37 @@ function TripDetail() {
       </div>
 
       <div className="mt-8">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Activity</h2>
-          <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
-            {(["all", "expense", "income"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full px-3 py-1 capitalize transition-colors ${
-                  filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {f === "all" ? "All" : f === "expense" ? "− Expenses" : "+ Income"}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
+              <SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
+              {(["all", "expense", "income"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`rounded-full px-3 py-1 capitalize transition-colors ${
+                    filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {f === "all" ? "All" : f === "expense" ? "− Expenses" : "+ Income"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+        {displayCurrency !== trip.currency && (
+          <div className="mb-2 text-xs text-muted-foreground">
+            {displayRateLoading ? "Converting…" : `Showing in ${displayCurrency} · 1 ${trip.currency} = ${displayRate.toFixed(4)} ${displayCurrency}`}
+          </div>
+        )}
         {!filteredExpenses.length ? (
           <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
             {expenses.length ? "Nothing matches this filter." : "No expenses yet. Tap + to add one."}
