@@ -12,4 +12,18 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+
+  vite: {
+    preview: {
+      host: "0.0.0.0",
+      port: 3000,
+      allowedHosts: [
+        "xb.dad-ai.online",
+        "xx.dad-ai.online",
+        "localhost",
+        "127.0.0.1",
+        "192.168.0.113",
+      ],
+    },
+  },
 });
