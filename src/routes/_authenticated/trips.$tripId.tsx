@@ -176,6 +176,30 @@ function TripDetail() {
 
   const [open, setOpen] = useState<null | "expense" | "income">(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<string>(trip?.currency ?? "USD");
+  const [displayRate, setDisplayRate] = useState<number>(1);
+  const [displayRateLoading, setDisplayRateLoading] = useState(false);
+  const fetchFx = useServerFn(getFxRate);
+
+  useEffect(() => {
+    if (trip?.currency) setDisplayCurrency(trip.currency);
+  }, [trip?.currency]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!trip?.currency || displayCurrency === trip.currency) {
+      setDisplayRate(1);
+      return;
+    }
+    setDisplayRateLoading(true);
+    fetchFx({ data: { from: trip.currency, to: displayCurrency } })
+      .then((r) => { if (!cancelled) setDisplayRate(r.rate); })
+      .catch(() => { if (!cancelled) setDisplayRate(1); })
+      .finally(() => { if (!cancelled) setDisplayRateLoading(false); });
+    return () => { cancelled = true; };
+  }, [trip?.currency, displayCurrency, fetchFx]);
+
+  const toDisplay = (v: number) => Math.round(v * displayRate * 100) / 100;
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
@@ -271,22 +295,37 @@ function TripDetail() {
       </div>
 
       <div className="mt-8">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Activity</h2>
-          <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
-            {(["all", "expense", "income"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full px-3 py-1 capitalize transition-colors ${
-                  filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {f === "all" ? "All" : f === "expense" ? "− Expenses" : "+ Income"}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
+              <SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
+              {(["all", "expense", "income"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`rounded-full px-3 py-1 capitalize transition-colors ${
+                    filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {f === "all" ? "All" : f === "expense" ? "− Expenses" : "+ Income"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+        {displayCurrency !== trip.currency && (
+          <div className="mb-2 text-xs text-muted-foreground">
+            {displayRateLoading ? "Converting…" : `Showing in ${displayCurrency} · 1 ${trip.currency} = ${displayRate.toFixed(4)} ${displayCurrency}`}
+          </div>
+        )}
         {!filteredExpenses.length ? (
           <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
             {expenses.length ? "Nothing matches this filter." : "No expenses yet. Tap + to add one."}
@@ -302,7 +341,7 @@ function TripDetail() {
                 <div key={day}>
                   <div className="mb-2 flex items-baseline justify-between text-xs uppercase tracking-wider text-muted-foreground">
                     <span>{format(parseISO(day), "EEE, d MMM yyyy")}</span>
-                    <span>{formatMoney(dayTotal, trip.currency)}</span>
+                    <span>{formatMoney(toDisplay(dayTotal), displayCurrency)}</span>
                   </div>
                   <div className="overflow-hidden rounded-2xl border border-border bg-card/60">
                     {items.map((e, i) => {
@@ -329,7 +368,7 @@ function TripDetail() {
                             </div>
                             <div className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}>
                               {e.kind === "income" ? "+" : "−"}
-                              {formatMoney(Number(e.amount_in_trip_currency), trip.currency)}
+                              {formatMoney(toDisplay(Number(e.amount_in_trip_currency)), displayCurrency)}
                             </div>
                             <button
                               onClick={() => setExpandedId(isOpen ? null : e.id)}
