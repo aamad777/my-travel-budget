@@ -368,7 +368,7 @@ function TripDetail() {
                             </div>
                             <div className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}>
                               {e.kind === "income" ? "+" : "−"}
-                              {formatMoney(Number(e.amount_in_trip_currency), trip.currency)}
+                              {formatMoney(toDisplay(Number(e.amount_in_trip_currency)), displayCurrency)}
                             </div>
                             <button
                               onClick={() => setExpandedId(isOpen ? null : e.id)}
