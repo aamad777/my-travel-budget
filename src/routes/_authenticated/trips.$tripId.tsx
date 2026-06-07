@@ -176,6 +176,30 @@ function TripDetail() {
 
   const [open, setOpen] = useState<null | "expense" | "income">(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<string>(trip?.currency ?? "USD");
+  const [displayRate, setDisplayRate] = useState<number>(1);
+  const [displayRateLoading, setDisplayRateLoading] = useState(false);
+  const fetchFx = useServerFn(getFxRate);
+
+  useEffect(() => {
+    if (trip?.currency) setDisplayCurrency(trip.currency);
+  }, [trip?.currency]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!trip?.currency || displayCurrency === trip.currency) {
+      setDisplayRate(1);
+      return;
+    }
+    setDisplayRateLoading(true);
+    fetchFx({ data: { from: trip.currency, to: displayCurrency } })
+      .then((r) => { if (!cancelled) setDisplayRate(r.rate); })
+      .catch(() => { if (!cancelled) setDisplayRate(1); })
+      .finally(() => { if (!cancelled) setDisplayRateLoading(false); });
+    return () => { cancelled = true; };
+  }, [trip?.currency, displayCurrency, fetchFx]);
+
+  const toDisplay = (v: number) => Math.round(v * displayRate * 100) / 100;
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
