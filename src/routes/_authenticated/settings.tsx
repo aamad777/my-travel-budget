@@ -8,15 +8,42 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CURRENCIES } from "@/lib/currencies";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, Check } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — Voyage" }] }),
   component: SettingsPage,
 });
 
+export type ThemeKey = "sunset" | "ocean" | "forest" | "midnight" | "cherry" | "coral";
+
+const THEMES: { key: ThemeKey; label: string; stops: string[] }[] = [
+  { key: "sunset", label: "Sunset Blaze", stops: ["#ff6b35", "#f7931e", "#e84393", "#6c5ce7"] },
+  { key: "ocean", label: "Ocean Deep", stops: ["#0c2340", "#1a4a6e", "#2d8a9e", "#5cbdb9"] },
+  { key: "forest", label: "Forest & Moss", stops: ["#1a3c2a", "#2d5a3d", "#5a8a5c", "#a0c49d"] },
+  { key: "midnight", label: "Midnight Indigo", stops: ["#0f1b3d", "#1e3a5f", "#3b6fa0", "#6c5ce7"] },
+  { key: "cherry", label: "Cherry Blossom", stops: ["#c45c7c", "#e88aab", "#f8c8d8", "#fef0f5"] },
+  { key: "coral", label: "Electric Coral", stops: ["#ff6b6b", "#ee5a70", "#c44569", "#574b90"] },
+];
+
+function getStoredTheme(): ThemeKey {
+  try {
+    const t = localStorage.getItem("voyage-theme") as ThemeKey | null;
+    if (t && THEMES.some((th) => th.key === t)) return t;
+  } catch { /* ignore */ }
+  return "sunset";
+}
+
+function setStoredTheme(key: ThemeKey) {
+  try {
+    localStorage.setItem("voyage-theme", key);
+    document.documentElement.setAttribute("data-theme", key);
+  } catch { /* ignore */ }
+}
+
 function SettingsPage() {
   const qc = useQueryClient();
+  const [theme, setTheme] = useState<ThemeKey>(getStoredTheme());
 
   const profileQ = useQuery({
     queryKey: ["profile"],
@@ -100,6 +127,31 @@ function SettingsPage() {
         <h1 className="text-2xl font-bold">Settings</h1>
         {profile?.email && <p className="text-sm text-muted-foreground">{profile.email}</p>}
       </div>
+
+      <section className="rounded-2xl border border-border bg-card/70 p-6">
+        <h2 className="text-lg font-semibold">Appearance</h2>
+        <p className="text-sm text-muted-foreground">Pick a color theme for the app.</p>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {THEMES.map((t) => {
+            const active = theme === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => { setTheme(t.key); setStoredTheme(t.key); toast.success(`Theme: ${t.label}`); }}
+                className={`relative rounded-xl border p-3 text-left transition hover:scale-[1.02] ${
+                  active ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/50"
+                }`}
+              >
+                <div className="h-10 w-full rounded-lg" style={{ background: `linear-gradient(135deg, ${t.stops[0]}, ${t.stops[1]} 50%, ${t.stops[2]})` }} />
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-sm font-medium">{t.label}</span>
+                  {active && <Check className="h-4 w-4 text-primary" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-border bg-card/70 p-6">
         <h2 className="text-lg font-semibold">Profile</h2>
