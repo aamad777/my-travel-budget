@@ -341,7 +341,7 @@ function TripDetail() {
                 <div key={day}>
                   <div className="mb-2 flex items-baseline justify-between text-xs uppercase tracking-wider text-muted-foreground">
                     <span>{format(parseISO(day), "EEE, d MMM yyyy")}</span>
-                    <span>{formatMoney(dayTotal, trip.currency)}</span>
+                    <span>{formatMoney(toDisplay(dayTotal), displayCurrency)}</span>
                   </div>
                   <div className="overflow-hidden rounded-2xl border border-border bg-card/60">
                     {items.map((e, i) => {
