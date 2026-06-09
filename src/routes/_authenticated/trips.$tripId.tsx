@@ -585,6 +585,31 @@ function QuickAddSheet({
             </div>
           </div>
 
+          {/* Quick amount chips for faster entry */}
+          <div className="flex flex-wrap gap-2">
+            {[5, 10, 20, 50, 100].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  const cur = parseFloat(amount);
+                  const next = (isFinite(cur) ? cur : 0) + v;
+                  setAmount(String(Math.round(next * 100) / 100));
+                }}
+                className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95"
+              >
+                +{v}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setAmount("")}
+              className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-destructive"
+            >
+              Clear
+            </button>
+          </div>
+
           <div className="rounded-xl border border-border bg-card/40 p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Convert to</Label>
