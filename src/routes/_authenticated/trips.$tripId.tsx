@@ -546,7 +546,7 @@ function QuickAddSheet({
         <Button
           size="lg"
           variant={isExpense ? "default" : "outline"}
-          className={isExpense ? "h-14 text-base shadow-glow" : "h-14 text-base"}
+          className={`h-14 text-base transition-all hover:scale-[1.03] active:scale-95 ${isExpense ? "shadow-glow" : ""}`}
         >
           {isExpense ? <Plus className="mr-2 h-5 w-5" /> : <Minus className="mr-2 h-5 w-5" />}
           {isExpense ? "Add expense" : "Add income"}
