@@ -446,6 +446,8 @@ function QuickAddSheet({
   const [previewRate, setPreviewRate] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [items, setItems] = useState<{ description: string; amount: string }[]>([]);
+  const [tappedChip, setTappedChip] = useState<number | null>(null);
+  const [tappedCategory, setTappedCategory] = useState<string | null>(null);
 
   const isExpense = kind === "expense";
 
@@ -595,8 +597,10 @@ function QuickAddSheet({
                   const cur = parseFloat(amount);
                   const next = (isFinite(cur) ? cur : 0) + v;
                   setAmount(String(Math.round(next * 100) / 100));
+                  setTappedChip(v);
+                  setTimeout(() => setTappedChip(null), 400);
                 }}
-                className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95"
+                className={`rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95 ${tappedChip === v ? "animate-tap-bounce" : ""}`}
               >
                 +{v}
               </button>
@@ -645,12 +649,16 @@ function QuickAddSheet({
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setCategoryId(c.id)}
+                    onClick={() => {
+                      setCategoryId(c.id);
+                      setTappedCategory(c.id);
+                      setTimeout(() => setTappedCategory(null), 400);
+                    }}
                     className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 animate-fade-in ${
                       active
                         ? "border-transparent shadow-glow"
                         : "border-border bg-card/60 hover:border-primary/50"
-                    }`}
+                    } ${tappedCategory === c.id ? "animate-tap-bounce" : ""}`}
                     style={active ? { backgroundColor: color + "22", color } : undefined}
                   >
                     <span
