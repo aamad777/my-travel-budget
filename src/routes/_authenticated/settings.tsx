@@ -43,7 +43,14 @@ function setStoredTheme(key: ThemeKey) {
 
 function SettingsPage() {
   const qc = useQueryClient();
-  const [theme, setTheme] = useState<ThemeKey>(getStoredTheme());
+  const [theme, setTheme] = useState<ThemeKey>("sunset");
+
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("voyage-theme") as ThemeKey | null;
+      if (t && THEMES.some((th) => th.key === t)) setTheme(t);
+    } catch { /* ignore */ }
+  }, []);
 
   const profileQ = useQuery({
     queryKey: ["profile"],
