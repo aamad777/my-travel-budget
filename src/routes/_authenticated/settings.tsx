@@ -26,13 +26,6 @@ const THEMES: { key: ThemeKey; label: string; stops: string[] }[] = [
   { key: "coral", label: "Electric Coral", stops: ["#ff6b6b", "#ee5a70", "#c44569", "#574b90"] },
 ];
 
-function getStoredTheme(): ThemeKey {
-  try {
-    const t = localStorage.getItem("voyage-theme") as ThemeKey | null;
-    if (t && THEMES.some((th) => th.key === t)) return t;
-  } catch { /* ignore */ }
-  return "sunset";
-}
 
 function setStoredTheme(key: ThemeKey) {
   try {
