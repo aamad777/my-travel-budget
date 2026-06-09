@@ -446,6 +446,8 @@ function QuickAddSheet({
   const [previewRate, setPreviewRate] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [items, setItems] = useState<{ description: string; amount: string }[]>([]);
+  const [tappedChip, setTappedChip] = useState<number | null>(null);
+  const [tappedCategory, setTappedCategory] = useState<string | null>(null);
 
   const isExpense = kind === "expense";
 
