@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,13 +26,6 @@ const THEMES: { key: ThemeKey; label: string; stops: string[] }[] = [
   { key: "coral", label: "Electric Coral", stops: ["#ff6b6b", "#ee5a70", "#c44569", "#574b90"] },
 ];
 
-function getStoredTheme(): ThemeKey {
-  try {
-    const t = localStorage.getItem("voyage-theme") as ThemeKey | null;
-    if (t && THEMES.some((th) => th.key === t)) return t;
-  } catch { /* ignore */ }
-  return "sunset";
-}
 
 function setStoredTheme(key: ThemeKey) {
   try {
@@ -43,7 +36,14 @@ function setStoredTheme(key: ThemeKey) {
 
 function SettingsPage() {
   const qc = useQueryClient();
-  const [theme, setTheme] = useState<ThemeKey>(getStoredTheme());
+  const [theme, setTheme] = useState<ThemeKey>("sunset");
+
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("voyage-theme") as ThemeKey | null;
+      if (t && THEMES.some((th) => th.key === t)) setTheme(t);
+    } catch { /* ignore */ }
+  }, []);
 
   const profileQ = useQuery({
     queryKey: ["profile"],
