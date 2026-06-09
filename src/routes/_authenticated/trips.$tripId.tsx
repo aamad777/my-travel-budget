@@ -611,24 +611,32 @@ function QuickAddSheet({
 
           <div>
             <Label>Category</Label>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
               {categories.map((c) => {
                 const active = categoryId === c.id;
                 const Icon = iconForCategory(c.name);
+                const color = c.color ?? "#5cbdb9";
                 return (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => setCategoryId(c.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 animate-fade-in ${
                       active
-                        ? "border-transparent text-primary-foreground shadow-sm"
-                        : "border-border bg-card/60 text-foreground hover:bg-card"
+                        ? "border-transparent shadow-glow"
+                        : "border-border bg-card/60 hover:border-primary/50"
                     }`}
-                    style={active ? { backgroundColor: c.color ?? "var(--primary)" } : undefined}
+                    style={active ? { backgroundColor: color + "22", color } : undefined}
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                    {c.name}{!c.is_preset && " ✦"}
+                    <span
+                      className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${active ? "scale-110" : "group-hover:scale-110"}`}
+                      style={{ backgroundColor: color + "33", color }}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="truncate max-w-full">
+                      {c.name}{!c.is_preset && " ✦"}
+                    </span>
                   </button>
                 );
               })}
