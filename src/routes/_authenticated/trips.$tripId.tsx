@@ -350,7 +350,7 @@ function TripDetail() {
                       const hasItems = !!e.expense_items && e.expense_items.length > 0;
                       const isOpen = expandedId === e.id;
                       return (
-                        <div key={e.id} className={`${i > 0 ? "border-t border-border/40" : ""}`}>
+                        <div key={e.id} className={`animate-fade-in ${i > 0 ? "border-t border-border/40" : ""}`}>
                           <div className="flex items-center gap-3 px-4 py-3">
                             <span
                               className="flex h-9 w-9 items-center justify-center rounded-full"
@@ -546,7 +546,7 @@ function QuickAddSheet({
         <Button
           size="lg"
           variant={isExpense ? "default" : "outline"}
-          className={isExpense ? "h-14 text-base shadow-glow" : "h-14 text-base"}
+          className={`h-14 text-base transition-all hover:scale-[1.03] active:scale-95 ${isExpense ? "shadow-glow" : ""}`}
         >
           {isExpense ? <Plus className="mr-2 h-5 w-5" /> : <Minus className="mr-2 h-5 w-5" />}
           {isExpense ? "Add expense" : "Add income"}
@@ -585,6 +585,31 @@ function QuickAddSheet({
             </div>
           </div>
 
+          {/* Quick amount chips for faster entry */}
+          <div className="flex flex-wrap gap-2">
+            {[5, 10, 20, 50, 100].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  const cur = parseFloat(amount);
+                  const next = (isFinite(cur) ? cur : 0) + v;
+                  setAmount(String(Math.round(next * 100) / 100));
+                }}
+                className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium transition-all hover:scale-105 hover:bg-primary hover:text-primary-foreground active:scale-95"
+              >
+                +{v}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setAmount("")}
+              className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-destructive"
+            >
+              Clear
+            </button>
+          </div>
+
           <div className="rounded-xl border border-border bg-card/40 p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Convert to</Label>
@@ -611,24 +636,32 @@ function QuickAddSheet({
 
           <div>
             <Label>Category</Label>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
               {categories.map((c) => {
                 const active = categoryId === c.id;
                 const Icon = iconForCategory(c.name);
+                const color = c.color ?? "#5cbdb9";
                 return (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => setCategoryId(c.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 animate-fade-in ${
                       active
-                        ? "border-transparent text-primary-foreground shadow-sm"
-                        : "border-border bg-card/60 text-foreground hover:bg-card"
+                        ? "border-transparent shadow-glow"
+                        : "border-border bg-card/60 hover:border-primary/50"
                     }`}
-                    style={active ? { backgroundColor: c.color ?? "var(--primary)" } : undefined}
+                    style={active ? { backgroundColor: color + "22", color } : undefined}
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                    {c.name}{!c.is_preset && " ✦"}
+                    <span
+                      className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${active ? "scale-110" : "group-hover:scale-110"}`}
+                      style={{ backgroundColor: color + "33", color }}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="truncate max-w-full">
+                      {c.name}{!c.is_preset && " ✦"}
+                    </span>
                   </button>
                 );
               })}
