@@ -350,7 +350,7 @@ function TripDetail() {
                       const hasItems = !!e.expense_items && e.expense_items.length > 0;
                       const isOpen = expandedId === e.id;
                       return (
-                        <div key={e.id} className={`${i > 0 ? "border-t border-border/40" : ""}`}>
+                        <div key={e.id} className={`animate-fade-in ${i > 0 ? "border-t border-border/40" : ""}`}>
                           <div className="flex items-center gap-3 px-4 py-3">
                             <span
                               className="flex h-9 w-9 items-center justify-center rounded-full"
