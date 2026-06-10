@@ -155,11 +155,33 @@ function TripDetail() {
     ? (totals.spent / Number(trip.budget_amount)) * 100 : 0;
 
   const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
+  const [searchText, setSearchText] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
-  const filteredExpenses = useMemo(
-    () => (filter === "all" ? expenses : expenses.filter((e) => e.kind === filter)),
-    [expenses, filter],
-  );
+  const filteredExpenses = useMemo(() => {
+    const min = parseFloat(minAmount);
+    const max = parseFloat(maxAmount);
+    const q = searchText.trim().toLowerCase();
+    return expenses.filter((e) => {
+      if (filter !== "all" && e.kind !== filter) return false;
+      const day = e.spent_at.slice(0, 10);
+      if (dateFrom && day < dateFrom) return false;
+      if (dateTo && day > dateTo) return false;
+      const v = Math.abs(Number(e.amount_in_trip_currency));
+      if (isFinite(min) && v < min) return false;
+      if (isFinite(max) && v > max) return false;
+      if (q) {
+        const cat = e.category_id ? (categories.find(c => c.id === e.category_id)?.name ?? "") : "";
+        const hay = `${e.note ?? ""} ${cat} ${e.currency}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [expenses, filter, searchText, dateFrom, dateTo, minAmount, maxAmount, categories]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, Expense[]>();
