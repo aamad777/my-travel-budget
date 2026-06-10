@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMoney } from "@/lib/currencies";
-import { ArrowLeft, Target, Check } from "lucide-react";
+import { ArrowLeft, Target, Check, Star, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,14 @@ function Summary() {
           tone={Number(trip.budget_amount) - total < 0 ? "bad" : "good"}
         />
       </div>
+
+      <TripEndCard
+        budget={Number(trip.budget_amount)}
+        spent={total}
+        currency={trip.currency}
+        endDate={trip.end_date}
+      />
+
 
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold">By category</h2>
@@ -234,3 +242,58 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "go
     </div>
   );
 }
+
+function TripEndCard({ budget, spent, currency, endDate }: { budget: number; spent: number; currency: string; endDate: string | null }) {
+  const remaining = budget - spent;
+  const ended = endDate ? new Date(endDate) <= new Date() : false;
+  const savedPct = budget > 0 ? remaining / budget : 0;
+  let stars = 0;
+  if (savedPct >= 0.5) stars = 5;
+  else if (savedPct >= 0.3) stars = 4;
+  else if (savedPct >= 0.15) stars = 3;
+  else if (savedPct >= 0.05) stars = 2;
+  else if (savedPct > 0) stars = 1;
+  const deservesGift = remaining > 10000;
+
+  return (
+    <section className="mt-6 animate-fade-in rounded-2xl border border-border bg-gradient-to-br from-card/80 to-card/40 p-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">
+            {ended ? "Trip complete" : "Trip in progress"}
+          </div>
+          <div className="mt-1 text-lg font-semibold">
+            {remaining >= 0 ? "You saved " : "You overspent "}
+            <span className={remaining >= 0 ? "text-[color:var(--success)]" : "text-destructive"}>
+              {formatMoney(Math.abs(remaining), currency)}
+            </span>
+            <span className="text-muted-foreground"> · spent {formatMoney(spent, currency)}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star
+              key={i}
+              className={`h-6 w-6 transition-all ${
+                i < stars ? "fill-yellow-400 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" : "text-muted-foreground/30"
+              }`}
+              style={{ animation: i < stars ? `tap-bounce 0.5s ${i * 80}ms ease-out both` : undefined }}
+            />
+          ))}
+        </div>
+      </div>
+      {deservesGift && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4 animate-tap-bounce">
+          <Gift className="h-6 w-6 text-primary" />
+          <div>
+            <div className="font-semibold">You deserve a gift! 🎁</div>
+            <div className="text-sm text-muted-foreground">
+              You saved over {formatMoney(10000, currency)} — go treat yourself.
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
