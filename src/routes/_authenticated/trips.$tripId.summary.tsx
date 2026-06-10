@@ -68,6 +68,14 @@ function Summary() {
         />
       </div>
 
+      <TripEndCard
+        budget={Number(trip.budget_amount)}
+        spent={total}
+        currency={trip.currency}
+        endDate={trip.end_date}
+      />
+
+
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold">By category</h2>
         {catEntries.length === 0 ? (
