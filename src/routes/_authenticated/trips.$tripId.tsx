@@ -341,8 +341,58 @@ function TripDetail() {
                 </button>
               ))}
             </div>
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              size="sm"
+              className="h-8 gap-1 text-xs transition-all hover:scale-105 active:scale-95"
+              onClick={() => setShowFilters((s) => !s)}
+            >
+              <SlidersHorizontal className="h-3 w-3" /> Search
+            </Button>
           </div>
         </div>
+
+        {showFilters && (
+          <div className="mb-4 animate-pop-in rounded-2xl border border-border bg-card/60 p-3 space-y-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search note, category, currency…"
+                className="h-9 pl-9 text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">From</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">To</Label>
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Min {trip.currency}</Label>
+                <Input type="number" inputMode="decimal" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} placeholder="0" className="h-9 text-sm" />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Max {trip.currency}</Label>
+                <Input type="number" inputMode="decimal" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} placeholder="∞" className="h-9 text-sm" />
+              </div>
+            </div>
+            {(searchText || dateFrom || dateTo || minAmount || maxAmount) && (
+              <button
+                type="button"
+                onClick={() => { setSearchText(""); setDateFrom(""); setDateTo(""); setMinAmount(""); setMaxAmount(""); }}
+                className="text-xs text-muted-foreground hover:text-destructive"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
+
         {displayCurrency !== trip.currency && (
           <div className="mb-2 text-xs text-muted-foreground">
             {displayRateLoading ? "Converting…" : `Showing in ${displayCurrency} · 1 ${trip.currency} = ${displayRate.toFixed(4)} ${displayCurrency}`}
