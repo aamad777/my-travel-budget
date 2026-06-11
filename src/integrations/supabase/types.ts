@@ -208,6 +208,56 @@ export type Database = {
         }
         Relationships: []
       }
+      shopping_items: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          is_purchased: boolean
+          name: string
+          note: string | null
+          price: number
+          source: string | null
+          trip_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_purchased?: boolean
+          name: string
+          note?: string | null
+          price?: number
+          source?: string | null
+          trip_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_purchased?: boolean
+          name?: string
+          note?: string | null
+          price?: number
+          source?: string | null
+          trip_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_items_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           budget_amount: number

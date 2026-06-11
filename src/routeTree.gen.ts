@@ -19,6 +19,7 @@ import { Route as AuthenticatedTripsIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedTripsNewRouteImport } from './routes/_authenticated/trips.new'
 import { Route as AuthenticatedTripsTripIdRouteImport } from './routes/_authenticated/trips.$tripId'
 import { Route as AuthenticatedTripsTripIdSummaryRouteImport } from './routes/_authenticated/trips.$tripId.summary'
+import { Route as AuthenticatedTripsTripIdBuyRouteImport } from './routes/_authenticated/trips.$tripId.buy'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -71,6 +72,12 @@ const AuthenticatedTripsTripIdSummaryRoute =
     path: '/summary',
     getParentRoute: () => AuthenticatedTripsTripIdRoute,
   } as any)
+const AuthenticatedTripsTripIdBuyRoute =
+  AuthenticatedTripsTripIdBuyRouteImport.update({
+    id: '/buy',
+    path: '/buy',
+    getParentRoute: () => AuthenticatedTripsTripIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRouteWithChildren
   '/trips/new': typeof AuthenticatedTripsNewRoute
   '/trips/': typeof AuthenticatedTripsIndexRoute
+  '/trips/$tripId/buy': typeof AuthenticatedTripsTripIdBuyRoute
   '/trips/$tripId/summary': typeof AuthenticatedTripsTripIdSummaryRoute
 }
 export interface FileRoutesByTo {
@@ -92,6 +100,7 @@ export interface FileRoutesByTo {
   '/trips/$tripId': typeof AuthenticatedTripsTripIdRouteWithChildren
   '/trips/new': typeof AuthenticatedTripsNewRoute
   '/trips': typeof AuthenticatedTripsIndexRoute
+  '/trips/$tripId/buy': typeof AuthenticatedTripsTripIdBuyRoute
   '/trips/$tripId/summary': typeof AuthenticatedTripsTripIdSummaryRoute
 }
 export interface FileRoutesById {
@@ -105,6 +114,7 @@ export interface FileRoutesById {
   '/_authenticated/trips/$tripId': typeof AuthenticatedTripsTripIdRouteWithChildren
   '/_authenticated/trips/new': typeof AuthenticatedTripsNewRoute
   '/_authenticated/trips/': typeof AuthenticatedTripsIndexRoute
+  '/_authenticated/trips/$tripId/buy': typeof AuthenticatedTripsTripIdBuyRoute
   '/_authenticated/trips/$tripId/summary': typeof AuthenticatedTripsTripIdSummaryRoute
 }
 export interface FileRouteTypes {
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId'
     | '/trips/new'
     | '/trips/'
+    | '/trips/$tripId/buy'
     | '/trips/$tripId/summary'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId'
     | '/trips/new'
     | '/trips'
+    | '/trips/$tripId/buy'
     | '/trips/$tripId/summary'
   id:
     | '__root__'
@@ -141,6 +153,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trips/$tripId'
     | '/_authenticated/trips/new'
     | '/_authenticated/trips/'
+    | '/_authenticated/trips/$tripId/buy'
     | '/_authenticated/trips/$tripId/summary'
   fileRoutesById: FileRoutesById
 }
@@ -224,15 +237,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTripsTripIdSummaryRouteImport
       parentRoute: typeof AuthenticatedTripsTripIdRoute
     }
+    '/_authenticated/trips/$tripId/buy': {
+      id: '/_authenticated/trips/$tripId/buy'
+      path: '/buy'
+      fullPath: '/trips/$tripId/buy'
+      preLoaderRoute: typeof AuthenticatedTripsTripIdBuyRouteImport
+      parentRoute: typeof AuthenticatedTripsTripIdRoute
+    }
   }
 }
 
 interface AuthenticatedTripsTripIdRouteChildren {
+  AuthenticatedTripsTripIdBuyRoute: typeof AuthenticatedTripsTripIdBuyRoute
   AuthenticatedTripsTripIdSummaryRoute: typeof AuthenticatedTripsTripIdSummaryRoute
 }
 
 const AuthenticatedTripsTripIdRouteChildren: AuthenticatedTripsTripIdRouteChildren =
   {
+    AuthenticatedTripsTripIdBuyRoute: AuthenticatedTripsTripIdBuyRoute,
     AuthenticatedTripsTripIdSummaryRoute: AuthenticatedTripsTripIdSummaryRoute,
   }
 
