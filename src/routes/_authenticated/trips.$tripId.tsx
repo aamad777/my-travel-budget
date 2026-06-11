@@ -275,6 +275,9 @@ function TripDetail() {
             </div>
           </div>
           <div className="flex gap-1">
+            <Button asChild variant="ghost" size="icon" title="Buy list">
+              <Link to="/trips/$tripId/buy" params={{ tripId }}><ShoppingBag className="h-4 w-4" /></Link>
+            </Button>
             <Button asChild variant="ghost" size="icon" title="Summary">
               <Link to="/trips/$tripId/summary" params={{ tripId }}><BarChart3 className="h-4 w-4" /></Link>
             </Button>
