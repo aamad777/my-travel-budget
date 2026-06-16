@@ -21,6 +21,9 @@ spec:
         - name: my-travel-budget
           image: ghcr.io/aamad777/my-travel-budget:169ed5d
           imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: my-travel-budget-env
           ports:
             - containerPort: 3000
           env:
