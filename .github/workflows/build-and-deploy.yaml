@@ -1,0 +1,63 @@
+name: Build image and update Kubernetes manifest
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "k8s/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/aamad777/my-travel-budget
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tag
+        id: vars
+        run: |
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          echo "tag=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --build-arg SUPABASE_PUBLISHABLE_KEY="${{ secrets.SUPABASE_PUBLISHABLE_KEY }}" \
+            -t $IMAGE_NAME:${{ steps.vars.outputs.tag }} \
+            -t $IMAGE_NAME:latest \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push $IMAGE_NAME:${{ steps.vars.outputs.tag }}
+          docker push $IMAGE_NAME:latest
+
+      - name: Update Kubernetes image tag
+        run: |
+          sed -i "s|image: ghcr.io/aamad777/my-travel-budget:.*|image: ghcr.io/aamad777/my-travel-budget:${{ steps.vars.outputs.tag }}|g" k8s/deployment.yaml
+
+      - name: Commit updated Kubernetes manifest
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add k8s/deployment.yaml
+          git commit -m "Update image tag to ${{ steps.vars.outputs.tag }}" || echo "No changes to commit"
+          git push
