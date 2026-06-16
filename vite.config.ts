@@ -19,7 +19,7 @@ export default defineConfig({
       port: 3000,
       allowedHosts: [
         "xb.dad-ai.online",
-        "xx.dad-ai.online",
+        "money.dad-ai.online",
         "localhost",
         "127.0.0.1",
         "192.168.0.113",
