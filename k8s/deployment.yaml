@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: my-travel-budget
-          image: ghcr.io/aamad777/my-travel-budget:latest
+          image: ghcr.io/aamad777/my-travel-budget:169ed5d
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
