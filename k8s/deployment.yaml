@@ -19,7 +19,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: my-travel-budget
-          image: ghcr.io/aamad777/my-travel-budget:169ed5d
+          image: ghcr.io/aamad777/my-travel-budget:7f66ae1
           imagePullPolicy: Always
           envFrom:
             - secretRef:
