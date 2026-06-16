@@ -12,18 +12,3 @@ spec:
       port: 80
       targetPort: 3000
       nodePort: 30095
-EOFcat > k8s/service.yaml <<'EOF'
-apiVersion: v1
-kind: Service
-metadata:
-  name: my-travel-budget
-  namespace: my-travel-budget
-spec:
-  type: NodePort
-  selector:
-    app: my-travel-budget
-  ports:
-    - name: http
-      port: 80
-      targetPort: 3000
-      nodePort: 30095
