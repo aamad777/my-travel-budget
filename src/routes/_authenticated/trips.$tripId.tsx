@@ -61,6 +61,8 @@ import {
   Briefcase,
   GraduationCap,
   Tag,
+  ChevronDown,
+  ChevronUp,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -252,6 +254,7 @@ function TripDetail() {
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showRingDetails, setShowRingDetails] = useState(false);
 
   const filteredExpenses = useMemo(() => {
     const min = parseFloat(minAmount);
@@ -403,8 +406,8 @@ function TripDetail() {
           </div>
         </div>
 
-        <div className="mt-6 flex items-end justify-around gap-2">
-          {/* Total Spent */}
+        <div className="mt-6 flex flex-col items-center">
+          {/* Total Spent - Main Ring */}
           <div className="flex flex-col items-center gap-1.5">
             <SmallRing
               percent={pct}
@@ -416,39 +419,62 @@ function TripDetail() {
             </span>
           </div>
 
-          {/* Most-Spent Day */}
-          <div className="flex flex-col items-center gap-1.5">
-            <SmallRing
-              percent={
-                totals.spent > 0 ? Math.min(100, (totals.mostSpentDay / totals.spent) * 100) : 0
-              }
-              label={formatMoney(toDisplay(totals.mostSpentDay), displayCurrency)}
-              color="var(--secondary)"
-            />
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Best Day
-            </span>
-          </div>
+          {/* Toggle button */}
+          <button
+            type="button"
+            onClick={() => setShowRingDetails((prev) => !prev)}
+            className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground transition-all hover:text-foreground active:scale-95"
+            aria-label={showRingDetails ? "Hide stats details" : "Show more stats details"}
+          >
+            <span>{showRingDetails ? "Hide Details" : "Show Details"}</span>
+            {showRingDetails ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
 
-          {/* Remaining */}
-          <div className="flex flex-col items-center gap-1.5">
-            <SmallRing
-              percent={
-                Number(trip.budget_amount) > 0
-                  ? Math.min(100, (Math.abs(totals.remaining) / Number(trip.budget_amount)) * 100)
-                  : 0
-              }
-              label={formatMoney(toDisplay(Math.abs(totals.remaining)), displayCurrency)}
-              color={totals.remaining >= 0 ? "var(--success)" : "var(--destructive)"}
-            />
-            <span
-              className={`text-[10px] uppercase tracking-wider ${
-                totals.remaining < 0 ? "text-destructive" : "text-muted-foreground"
-              }`}
-            >
-              {totals.remaining >= 0 ? "Remaining" : "Over Budget"}
-            </span>
-          </div>
+          {/* Collapsible stats */}
+          {showRingDetails && (
+            <div className="mt-4 flex w-full justify-around gap-2 animate-pop-in border-t border-border/20 pt-4">
+              {/* Most-Spent Day */}
+              <div className="flex flex-col items-center gap-1.5">
+                <SmallRing
+                  percent={
+                    totals.spent > 0 ? Math.min(100, (totals.mostSpentDay / totals.spent) * 100) : 0
+                  }
+                  label={formatMoney(toDisplay(totals.mostSpentDay), displayCurrency)}
+                  color="var(--secondary)"
+                />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Best Day
+                </span>
+              </div>
+
+              {/* Remaining */}
+              <div className="flex flex-col items-center gap-1.5">
+                <SmallRing
+                  percent={
+                    Number(trip.budget_amount) > 0
+                      ? Math.min(
+                          100,
+                          (Math.abs(totals.remaining) / Number(trip.budget_amount)) * 100,
+                        )
+                      : 0
+                  }
+                  label={formatMoney(toDisplay(Math.abs(totals.remaining)), displayCurrency)}
+                  color={totals.remaining >= 0 ? "var(--success)" : "var(--destructive)"}
+                />
+                <span
+                  className={`text-[10px] uppercase tracking-wider ${
+                    totals.remaining < 0 ? "text-destructive" : "text-muted-foreground"
+                  }`}
+                >
+                  {totals.remaining >= 0 ? "Remaining" : "Over Budget"}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {todayStats && (
@@ -731,14 +757,14 @@ function TripDetail() {
                             </div>
                             <button
                               onClick={() => setExpandedId(isOpen ? null : e.id)}
-                              className="ml-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                              className="ml-1 rounded p-1 text-muted-foreground hover:text-foreground transition-all hover:scale-110 active:scale-90"
                               aria-label={isOpen ? "Hide breakdown" : "Add or view breakdown"}
                               title="Breakdown"
                             >
                               {isOpen ? (
-                                <Minus className="h-4 w-4" />
+                                <ChevronUp className="h-4 w-4" />
                               ) : (
-                                <Plus className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4" />
                               )}
                             </button>
                             <button
@@ -749,13 +775,13 @@ function TripDetail() {
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-                          {(hasItems || isOpen) && (
+                          {isOpen && (
                             <div className="px-4 pb-3">
-                              <div className="ml-12 space-y-2 rounded-xl bg-muted/30 px-3 py-2">
+                              <div className="ml-12 space-y-2 rounded-xl bg-muted/30 px-3 py-2 animate-pop-in">
                                 {e.expense_items?.map((item) => (
                                   <div
                                     key={item.id}
-                                    className="flex items-center justify-between gap-2 text-xs"
+                                    className="flex items-center justify-between gap-2 text-xs animate-fade-in"
                                   >
                                     <span className="flex-1 truncate text-muted-foreground">
                                       {item.description}
@@ -763,20 +789,16 @@ function TripDetail() {
                                     <span className="font-medium">
                                       {formatMoney(Number(item.amount), e.currency)}
                                     </span>
-                                    {isOpen && (
-                                      <button
-                                        onClick={() => deleteItemMut.mutate(item.id)}
-                                        className="rounded p-0.5 text-muted-foreground hover:text-destructive"
-                                        aria-label="Remove item"
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </button>
-                                    )}
+                                    <button
+                                      onClick={() => deleteItemMut.mutate(item.id)}
+                                      className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                      aria-label="Remove item"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
                                   </div>
                                 ))}
-                                {isOpen && (
-                                  <InlineItemAdder expenseId={e.id} currency={e.currency} />
-                                )}
+                                <InlineItemAdder expenseId={e.id} currency={e.currency} />
                               </div>
                             </div>
                           )}
