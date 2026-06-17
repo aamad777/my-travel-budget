@@ -8,18 +8,59 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
-} from "@/components/ui/sheet";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { CURRENCIES, formatMoney } from "@/lib/currencies";
 import { BudgetRing } from "@/routes/index";
 import {
-  Plus, Minus, ArrowLeft, BarChart3, Trash2, MapPin, Calendar, X, Search, SlidersHorizontal,
-  Utensils, Bus, BedDouble, Ticket, ShoppingBag, Sparkles, Coffee, Beer,
-  Plane, Car, Fuel, Train, Ship, Gift, HeartPulse, Stethoscope, Wifi,
-  Phone, Film, Music, Camera, Dumbbell, PawPrint, Baby, Shirt, Wrench,
-  Banknote, CreditCard, PiggyBank, Briefcase, GraduationCap, Tag,
+  Plus,
+  Minus,
+  ArrowLeft,
+  BarChart3,
+  Trash2,
+  MapPin,
+  Calendar,
+  X,
+  Search,
+  SlidersHorizontal,
+  Utensils,
+  Bus,
+  BedDouble,
+  Ticket,
+  ShoppingBag,
+  Sparkles,
+  Coffee,
+  Beer,
+  Plane,
+  Car,
+  Fuel,
+  Train,
+  Ship,
+  Gift,
+  HeartPulse,
+  Stethoscope,
+  Wifi,
+  Phone,
+  Film,
+  Music,
+  Camera,
+  Dumbbell,
+  PawPrint,
+  Baby,
+  Shirt,
+  Wrench,
+  Banknote,
+  CreditCard,
+  PiggyBank,
+  Briefcase,
+  GraduationCap,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -102,11 +143,7 @@ function TripDetail() {
   const tripQuery = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trips")
-        .select("*")
-        .eq("id", tripId)
-        .single();
+      const { data, error } = await supabase.from("trips").select("*").eq("id", tripId).single();
       if (error) throw error;
       return data;
     },
@@ -117,7 +154,9 @@ function TripDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
-        .select("id,amount,currency,amount_in_trip_currency,fx_rate_to_trip,category_id,note,spent_at,kind,expense_items(id,expense_id,description,amount)")
+        .select(
+          "id,amount,currency,amount_in_trip_currency,fx_rate_to_trip,category_id,note,spent_at,kind,expense_items(id,expense_id,description,amount)",
+        )
         .eq("trip_id", tripId)
         .order("spent_at", { ascending: false });
       if (error) throw error;
@@ -144,15 +183,67 @@ function TripDetail() {
 
   const totals = useMemo(() => {
     let spent = 0;
+    const byDay: Record<string, number> = {};
     for (const e of expenses) {
       const v = Number(e.amount_in_trip_currency);
-      spent += e.kind === "income" ? -v : v;
+      const delta = e.kind === "income" ? -v : v;
+      spent += delta;
+      if (e.kind === "expense") {
+        const d = e.spent_at.slice(0, 10);
+        byDay[d] = (byDay[d] ?? 0) + v;
+      }
     }
-    return { spent, remaining: (Number(trip?.budget_amount ?? 0) - spent) };
+    const mostSpentDay = Object.values(byDay).length ? Math.max(...Object.values(byDay)) : 0;
+    return { spent, remaining: Number(trip?.budget_amount ?? 0) - spent, mostSpentDay };
   }, [expenses, trip]);
 
-  const pct = trip && Number(trip.budget_amount) > 0
-    ? (totals.spent / Number(trip.budget_amount)) * 100 : 0;
+  const todayStats = useMemo(() => {
+    if (!trip) return null;
+
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+
+    const expensesUntilToday = expenses.filter((e) => {
+      const expenseDateStr = e.spent_at.slice(0, 10);
+      return expenseDateStr <= todayStr;
+    });
+
+    const spendUntilToday = expensesUntilToday.reduce((sum, e) => {
+      const v = Number(e.amount_in_trip_currency);
+      return sum + (e.kind === "income" ? -v : v);
+    }, 0);
+
+    let paceBudget = null;
+    let daysPassed = 0;
+    let totalDays = 0;
+    let savingUntilToday = Number(trip.budget_amount) - spendUntilToday;
+
+    if (trip.start_date && trip.end_date) {
+      const start = new Date(trip.start_date);
+      const end = new Date(trip.end_date);
+      totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      if (totalDays > 0) {
+        const dailyBudget = Number(trip.budget_amount) / totalDays;
+        const today = new Date(todayStr);
+        const daysFromStart =
+          Math.ceil((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        daysPassed = Math.max(0, Math.min(totalDays, daysFromStart));
+        paceBudget = dailyBudget * daysPassed;
+        savingUntilToday = paceBudget - spendUntilToday;
+      }
+    }
+
+    return {
+      spendUntilToday,
+      savingUntilToday,
+      paceBudget,
+      daysPassed,
+      totalDays,
+      hasDates: !!(trip.start_date && trip.end_date),
+    };
+  }, [expenses, trip]);
+
+  const pct =
+    trip && Number(trip.budget_amount) > 0 ? (totals.spent / Number(trip.budget_amount)) * 100 : 0;
 
   const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
   const [searchText, setSearchText] = useState("");
@@ -175,7 +266,9 @@ function TripDetail() {
       if (isFinite(min) && v < min) return false;
       if (isFinite(max) && v > max) return false;
       if (q) {
-        const cat = e.category_id ? (categories.find(c => c.id === e.category_id)?.name ?? "") : "";
+        const cat = e.category_id
+          ? (categories.find((c) => c.id === e.category_id)?.name ?? "")
+          : "";
         const hay = `${e.note ?? ""} ${cat} ${e.currency}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -215,10 +308,18 @@ function TripDetail() {
     }
     setDisplayRateLoading(true);
     fetchFx({ data: { from: trip.currency, to: displayCurrency } })
-      .then((r) => { if (!cancelled) setDisplayRate(r.rate); })
-      .catch(() => { if (!cancelled) setDisplayRate(1); })
-      .finally(() => { if (!cancelled) setDisplayRateLoading(false); });
-    return () => { cancelled = true; };
+      .then((r) => {
+        if (!cancelled) setDisplayRate(r.rate);
+      })
+      .catch(() => {
+        if (!cancelled) setDisplayRate(1);
+      })
+      .finally(() => {
+        if (!cancelled) setDisplayRateLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [trip?.currency, displayCurrency, fetchFx]);
 
   const toDisplay = (v: number) => Math.round(v * displayRate * 100) / 100;
@@ -259,7 +360,10 @@ function TripDetail() {
 
   return (
     <div>
-      <Link to="/trips" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/trips"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Trips
       </Link>
 
@@ -268,18 +372,30 @@ function TripDetail() {
           <div>
             <h1 className="text-2xl font-bold">{trip.name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              {trip.destination && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{trip.destination}</span>}
+              {trip.destination && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {trip.destination}
+                </span>
+              )}
               {(trip.start_date || trip.end_date) && (
-                <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{trip.start_date} {trip.end_date && `→ ${trip.end_date}`}</span>
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {trip.start_date} {trip.end_date && `→ ${trip.end_date}`}
+                </span>
               )}
             </div>
           </div>
           <div className="flex gap-1">
             <Button asChild variant="ghost" size="icon" title="Buy list">
-              <Link to="/trips/$tripId/buy" params={{ tripId }}><ShoppingBag className="h-4 w-4" /></Link>
+              <Link to="/trips/$tripId/buy" params={{ tripId }}>
+                <ShoppingBag className="h-4 w-4" />
+              </Link>
             </Button>
             <Button asChild variant="ghost" size="icon" title="Summary">
-              <Link to="/trips/$tripId/summary" params={{ tripId }}><BarChart3 className="h-4 w-4" /></Link>
+              <Link to="/trips/$tripId/summary" params={{ tripId }}>
+                <BarChart3 className="h-4 w-4" />
+              </Link>
             </Button>
             <Button variant="ghost" size="icon" onClick={deleteTrip} title="Delete trip">
               <Trash2 className="h-4 w-4 text-destructive" />
@@ -287,17 +403,104 @@ function TripDetail() {
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col items-center gap-2">
-          <BudgetRing
-            percent={pct}
-            label={formatMoney(totals.spent, trip.currency)}
-            sub={`of ${formatMoney(Number(trip.budget_amount), trip.currency)}`}
-          />
-          <div className={`text-sm ${totals.remaining < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-            {totals.remaining < 0 ? "Over budget by " : "Remaining: "}
-            <span className="font-semibold">{formatMoney(Math.abs(totals.remaining), trip.currency)}</span>
+        <div className="mt-6 flex items-end justify-around gap-2">
+          {/* Total Spent */}
+          <div className="flex flex-col items-center gap-1.5">
+            <SmallRing
+              percent={pct}
+              label={formatMoney(toDisplay(totals.spent), displayCurrency)}
+              color="var(--primary)"
+            />
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Total Spent
+            </span>
+          </div>
+
+          {/* Most-Spent Day */}
+          <div className="flex flex-col items-center gap-1.5">
+            <SmallRing
+              percent={
+                totals.spent > 0 ? Math.min(100, (totals.mostSpentDay / totals.spent) * 100) : 0
+              }
+              label={formatMoney(toDisplay(totals.mostSpentDay), displayCurrency)}
+              color="var(--secondary)"
+            />
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Best Day
+            </span>
+          </div>
+
+          {/* Remaining */}
+          <div className="flex flex-col items-center gap-1.5">
+            <SmallRing
+              percent={
+                Number(trip.budget_amount) > 0
+                  ? Math.min(100, (Math.abs(totals.remaining) / Number(trip.budget_amount)) * 100)
+                  : 0
+              }
+              label={formatMoney(toDisplay(Math.abs(totals.remaining)), displayCurrency)}
+              color={totals.remaining >= 0 ? "var(--success)" : "var(--destructive)"}
+            />
+            <span
+              className={`text-[10px] uppercase tracking-wider ${
+                totals.remaining < 0 ? "text-destructive" : "text-muted-foreground"
+              }`}
+            >
+              {totals.remaining >= 0 ? "Remaining" : "Over Budget"}
+            </span>
           </div>
         </div>
+
+        {todayStats && (
+          <div className="mt-6 border-t border-border/40 pt-4 w-full">
+            <div className="flex items-center justify-between text-xs text-muted-foreground uppercase tracking-wider mb-2">
+              <span>Status Until Today</span>
+              {todayStats.hasDates && (
+                <span>
+                  Day {todayStats.daysPassed} of {todayStats.totalDays}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-background/40 p-3">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground block">
+                  Spent until today
+                </span>
+                <span className="text-base font-semibold block mt-0.5">
+                  {formatMoney(toDisplay(todayStats.spendUntilToday), displayCurrency)}
+                </span>
+                {todayStats.paceBudget !== null && (
+                  <span className="text-[10px] text-muted-foreground">
+                    of {formatMoney(toDisplay(todayStats.paceBudget), displayCurrency)} paced
+                  </span>
+                )}
+              </div>
+              <div className="rounded-2xl bg-background/40 p-3">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground block">
+                  {todayStats.savingUntilToday >= 0 ? "Saved until today" : "Overspent until today"}
+                </span>
+                <span
+                  className={`text-base font-semibold block mt-0.5 ${
+                    todayStats.savingUntilToday >= 0
+                      ? "text-[color:var(--success)]"
+                      : "text-destructive"
+                  }`}
+                >
+                  {formatMoney(toDisplay(Math.abs(todayStats.savingUntilToday)), displayCurrency)}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold mt-1 ${
+                    todayStats.savingUntilToday >= 0
+                      ? "bg-[color:var(--success)]/10 text-[color:var(--success)]"
+                      : "bg-destructive/10 text-destructive"
+                  }`}
+                >
+                  {todayStats.savingUntilToday >= 0 ? "On track" : "Over budget"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <QuickAddSheet
@@ -324,10 +527,14 @@ function TripDetail() {
           <h2 className="text-lg font-semibold">Activity</h2>
           <div className="flex items-center gap-2">
             <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
-              <SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[100px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {CURRENCIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.code}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -337,7 +544,9 @@ function TripDetail() {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`rounded-full px-3 py-1 capitalize transition-colors ${
-                    filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    filter === f
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {f === "all" ? "All" : f === "expense" ? "− Expenses" : "+ Income"}
@@ -368,26 +577,64 @@ function TripDetail() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">From</Label>
-                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  From
+                </Label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="h-9 text-sm"
+                />
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">To</Label>
-                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  To
+                </Label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="h-9 text-sm"
+                />
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Min {trip.currency}</Label>
-                <Input type="number" inputMode="decimal" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} placeholder="0" className="h-9 text-sm" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Min {trip.currency}
+                </Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                  placeholder="0"
+                  className="h-9 text-sm"
+                />
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Max {trip.currency}</Label>
-                <Input type="number" inputMode="decimal" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} placeholder="∞" className="h-9 text-sm" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Max {trip.currency}
+                </Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={maxAmount}
+                  onChange={(e) => setMaxAmount(e.target.value)}
+                  placeholder="∞"
+                  className="h-9 text-sm"
+                />
               </div>
             </div>
             {(searchText || dateFrom || dateTo || minAmount || maxAmount) && (
               <button
                 type="button"
-                onClick={() => { setSearchText(""); setDateFrom(""); setDateTo(""); setMinAmount(""); setMaxAmount(""); }}
+                onClick={() => {
+                  setSearchText("");
+                  setDateFrom("");
+                  setDateTo("");
+                  setMinAmount("");
+                  setMaxAmount("");
+                }}
                 className="text-xs text-muted-foreground hover:text-destructive"
               >
                 Clear filters
@@ -398,25 +645,45 @@ function TripDetail() {
 
         {displayCurrency !== trip.currency && (
           <div className="mb-2 text-xs text-muted-foreground">
-            {displayRateLoading ? "Converting…" : `Showing in ${displayCurrency} · 1 ${trip.currency} = ${displayRate.toFixed(4)} ${displayCurrency}`}
+            {displayRateLoading
+              ? "Converting…"
+              : `Showing in ${displayCurrency} · 1 ${trip.currency} = ${displayRate.toFixed(4)} ${displayCurrency}`}
           </div>
         )}
         {!filteredExpenses.length ? (
           <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
-            {expenses.length ? "Nothing matches this filter." : "No expenses yet. Tap + to add one."}
+            {expenses.length
+              ? "Nothing matches this filter."
+              : "No expenses yet. Tap + to add one."}
           </div>
         ) : (
           <div className="space-y-5">
             {grouped.map(([day, items]) => {
-              const dayTotal = items.reduce(
-                (s, e) => s + (e.kind === "income" ? -Number(e.amount_in_trip_currency) : Number(e.amount_in_trip_currency)),
-                0,
-              );
+              const dayExpenses = items
+                .filter((e) => e.kind === "expense")
+                .reduce((s, e) => s + Number(e.amount_in_trip_currency), 0);
+              const dayIncomes = items
+                .filter((e) => e.kind === "income")
+                .reduce((s, e) => s + Number(e.amount_in_trip_currency), 0);
               return (
                 <div key={day}>
                   <div className="mb-2 flex items-baseline justify-between text-xs uppercase tracking-wider text-muted-foreground">
                     <span>{format(parseISO(day), "EEE, d MMM yyyy")}</span>
-                    <span>{formatMoney(toDisplay(dayTotal), displayCurrency)}</span>
+                    <span className="flex items-center gap-1.5 font-medium">
+                      {dayIncomes > 0 && (
+                        <span className="text-[color:var(--success)]">
+                          +{formatMoney(toDisplay(dayIncomes), displayCurrency)}
+                        </span>
+                      )}
+                      {dayIncomes > 0 && dayExpenses > 0 && (
+                        <span className="text-muted-foreground/30">|</span>
+                      )}
+                      {dayExpenses > 0 ? (
+                        <span>{formatMoney(toDisplay(dayExpenses), displayCurrency)}</span>
+                      ) : (
+                        dayIncomes === 0 && <span>{formatMoney(0, displayCurrency)}</span>
+                      )}
+                    </span>
                   </div>
                   <div className="overflow-hidden rounded-2xl border border-border bg-card/60">
                     {items.map((e, i) => {
@@ -425,25 +692,42 @@ function TripDetail() {
                       const hasItems = !!e.expense_items && e.expense_items.length > 0;
                       const isOpen = expandedId === e.id;
                       return (
-                        <div key={e.id} className={`animate-fade-in ${i > 0 ? "border-t border-border/40" : ""}`}>
+                        <div
+                          key={e.id}
+                          className={`animate-fade-in ${i > 0 ? "border-t border-border/40" : ""}`}
+                        >
                           <div className="flex items-center gap-3 px-4 py-3">
                             <span
                               className="flex h-9 w-9 items-center justify-center rounded-full"
-                              style={{ backgroundColor: (cat?.color ?? "#5cbdb9") + "33", color: cat?.color ?? "#5cbdb9" }}
+                              style={{
+                                backgroundColor: (cat?.color ?? "#5cbdb9") + "33",
+                                color: cat?.color ?? "#5cbdb9",
+                              }}
                             >
                               <Icon className="h-4 w-4" />
                             </span>
                             <div className="min-w-0 flex-1">
-                              <div className="truncate font-medium">{e.note || cat?.name || (e.kind === "income" ? "Income" : "Expense")}</div>
+                              <div className="truncate font-medium">
+                                {e.note ||
+                                  cat?.name ||
+                                  (e.kind === "income" ? "Income" : "Expense")}
+                              </div>
                               <div className="text-xs text-muted-foreground">
                                 {cat?.name ?? "Uncategorized"}
-                                {e.currency !== trip.currency && ` · ${formatMoney(Number(e.amount), e.currency)}`}
-                                {hasItems && ` · ${e.expense_items!.length} item${e.expense_items!.length > 1 ? "s" : ""}`}
+                                {e.currency !== trip.currency &&
+                                  ` · ${formatMoney(Number(e.amount), e.currency)}`}
+                                {hasItems &&
+                                  ` · ${e.expense_items!.length} item${e.expense_items!.length > 1 ? "s" : ""}`}
                               </div>
                             </div>
-                            <div className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}>
+                            <div
+                              className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}
+                            >
                               {e.kind === "income" ? "+" : "−"}
-                              {formatMoney(toDisplay(Number(e.amount_in_trip_currency)), displayCurrency)}
+                              {formatMoney(
+                                toDisplay(Number(e.amount_in_trip_currency)),
+                                displayCurrency,
+                              )}
                             </div>
                             <button
                               onClick={() => setExpandedId(isOpen ? null : e.id)}
@@ -451,7 +735,11 @@ function TripDetail() {
                               aria-label={isOpen ? "Hide breakdown" : "Add or view breakdown"}
                               title="Breakdown"
                             >
-                              {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                              {isOpen ? (
+                                <Minus className="h-4 w-4" />
+                              ) : (
+                                <Plus className="h-4 w-4" />
+                              )}
                             </button>
                             <button
                               onClick={() => deleteMut.mutate(e.id)}
@@ -465,9 +753,16 @@ function TripDetail() {
                             <div className="px-4 pb-3">
                               <div className="ml-12 space-y-2 rounded-xl bg-muted/30 px-3 py-2">
                                 {e.expense_items?.map((item) => (
-                                  <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
-                                    <span className="flex-1 truncate text-muted-foreground">{item.description}</span>
-                                    <span className="font-medium">{formatMoney(Number(item.amount), e.currency)}</span>
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center justify-between gap-2 text-xs"
+                                  >
+                                    <span className="flex-1 truncate text-muted-foreground">
+                                      {item.description}
+                                    </span>
+                                    <span className="font-medium">
+                                      {formatMoney(Number(item.amount), e.currency)}
+                                    </span>
                                     {isOpen && (
                                       <button
                                         onClick={() => deleteItemMut.mutate(item.id)}
@@ -499,8 +794,57 @@ function TripDetail() {
   );
 }
 
+function SmallRing({ percent, label, color }: { percent: number; label: string; color: string }) {
+  const p = Math.max(0, Math.min(100, percent));
+  const r = 44;
+  const c = 2 * Math.PI * r;
+  const offset = c - (p / 100) * c;
+  return (
+    <div className="relative h-28 w-28">
+      <svg viewBox="0 0 100 100" className="h-28 w-28 -rotate-90">
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          stroke="currentColor"
+          strokeOpacity="0.12"
+          strokeWidth="9"
+          fill="none"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          stroke={color}
+          strokeWidth="9"
+          fill="none"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{
+            transition: "stroke-dashoffset 700ms cubic-bezier(0.4,0,0.2,1)",
+            filter: `drop-shadow(0 0 6px ${color}88)`,
+          }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-1">
+        <span
+          className="text-[11px] font-bold leading-tight text-center break-all"
+          style={{ color }}
+        >
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+}
 function QuickAddSheet({
-  kind, open, setOpen, tripId, tripCurrency, categories,
+  kind,
+  open,
+  setOpen,
+  tripId,
+  tripCurrency,
+  categories,
 }: {
   kind: "expense" | "income";
   open: boolean;
@@ -534,10 +878,18 @@ function QuickAddSheet({
     }
     setPreviewLoading(true);
     fetchFx({ data: { from: currency, to: previewCurrency } })
-      .then((r) => { if (!cancelled) setPreviewRate(r.rate); })
-      .catch(() => { if (!cancelled) setPreviewRate(null); })
-      .finally(() => { if (!cancelled) setPreviewLoading(false); });
-    return () => { cancelled = true; };
+      .then((r) => {
+        if (!cancelled) setPreviewRate(r.rate);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewRate(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [currency, previewCurrency, fetchFx]);
 
   const previewAmount = useMemo(() => {
@@ -578,29 +930,33 @@ function QuickAddSheet({
       const converted = Math.round(n * rate * 100) / 100;
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
-      const { data: inserted, error } = await supabase.from("expenses").insert({
-        trip_id: tripId,
-        user_id: u.user.id,
-        amount: n,
-        currency,
-        fx_rate_to_trip: rate,
-        amount_in_trip_currency: converted,
-        category_id: categoryId || null,
-        note: note.trim() || null,
-        spent_at: new Date(date + "T12:00:00").toISOString(),
-        kind,
-      }).select("id").single();
+      const { data: inserted, error } = await supabase
+        .from("expenses")
+        .insert({
+          trip_id: tripId,
+          user_id: u.user.id,
+          amount: n,
+          currency,
+          fx_rate_to_trip: rate,
+          amount_in_trip_currency: converted,
+          category_id: categoryId || null,
+          note: note.trim() || null,
+          spent_at: new Date(date + "T12:00:00").toISOString(),
+          kind,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
 
-      const validItems = items.filter(it => it.description.trim() && parseFloat(it.amount) > 0);
+      const validItems = items.filter((it) => it.description.trim() && parseFloat(it.amount) > 0);
       if (validItems.length > 0) {
         const { error: itemErr } = await supabase.from("expense_items").insert(
-          validItems.map(it => ({
+          validItems.map((it) => ({
             expense_id: inserted.id,
             user_id: u.user!.id,
             description: it.description.trim(),
             amount: parseFloat(it.amount),
-          }))
+          })),
         );
         if (itemErr) throw itemErr;
       }
@@ -608,7 +964,9 @@ function QuickAddSheet({
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["trips"] });
       toast.success(isExpense ? "Expense added" : "Income added");
-      setAmount(""); setNote(""); setItems([]);
+      setAmount("");
+      setNote("");
+      setItems([]);
       setOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
@@ -652,10 +1010,14 @@ function QuickAddSheet({
             <div>
               <Label>Currency</Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {CURRENCIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -691,20 +1053,30 @@ function QuickAddSheet({
 
           <div className="rounded-xl border border-border bg-card/40 p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Convert to</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                Convert to
+              </Label>
               <Select value={previewCurrency} onValueChange={setPreviewCurrency}>
-                <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-[110px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {CURRENCIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="text-lg font-semibold">
-              {previewAmount != null
-                ? <>= {formatMoney(previewAmount, previewCurrency)}</>
-                : <span className="text-muted-foreground text-sm">{previewLoading ? "Fetching rate…" : "Enter an amount to see equivalent"}</span>}
+              {previewAmount != null ? (
+                <>= {formatMoney(previewAmount, previewCurrency)}</>
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  {previewLoading ? "Fetching rate…" : "Enter an amount to see equivalent"}
+                </span>
+              )}
             </div>
             {previewRate != null && currency !== previewCurrency && (
               <div className="mt-1 text-xs text-muted-foreground">
@@ -743,7 +1115,8 @@ function QuickAddSheet({
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="truncate max-w-full">
-                      {c.name}{!c.is_preset && " ✦"}
+                      {c.name}
+                      {!c.is_preset && " ✦"}
                     </span>
                   </button>
                 );
@@ -753,7 +1126,14 @@ function QuickAddSheet({
 
           <div>
             <Label htmlFor="note">Note (optional)</Label>
-            <Textarea id="note" rows={2} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What was this for?" />
+            <Textarea
+              id="note"
+              rows={2}
+              maxLength={300}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="What was this for?"
+            />
           </div>
 
           <div className="space-y-2">
@@ -793,11 +1173,14 @@ function QuickAddSheet({
             <Button type="button" variant="ghost" size="sm" onClick={addItem} className="text-xs">
               <Plus className="mr-1 h-3 w-3" /> Add item
             </Button>
-            {itemsTotal > 0 && parseFloat(amount) > 0 && Math.abs(itemsTotal - parseFloat(amount)) > 0.01 && (
-              <div className="text-xs text-amber-400">
-                Item total ({formatMoney(itemsTotal, currency)}) doesn't match entered amount ({formatMoney(parseFloat(amount), currency)})
-              </div>
-            )}
+            {itemsTotal > 0 &&
+              parseFloat(amount) > 0 &&
+              Math.abs(itemsTotal - parseFloat(amount)) > 0.01 && (
+                <div className="text-xs text-amber-400">
+                  Item total ({formatMoney(itemsTotal, currency)}) doesn't match entered amount (
+                  {formatMoney(parseFloat(amount), currency)})
+                </div>
+              )}
           </div>
 
           <div>
@@ -834,7 +1217,8 @@ function InlineItemAdder({ expenseId, currency }: { expenseId: string; currency:
         amount: n,
       });
       if (error) throw error;
-      setDesc(""); setAmt("");
+      setDesc("");
+      setAmt("");
       qc.invalidateQueries({ queryKey: ["expenses"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
@@ -861,7 +1245,14 @@ function InlineItemAdder({ expenseId, currency }: { expenseId: string; currency:
         placeholder="0.00"
         className="h-7 w-20 text-xs"
       />
-      <Button type="button" size="sm" variant="secondary" className="h-7 px-2" onClick={add} disabled={saving}>
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        className="h-7 px-2"
+        onClick={add}
+        disabled={saving}
+      >
         <Plus className="h-3 w-3" />
       </Button>
     </div>

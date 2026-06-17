@@ -5,7 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CURRENCIES, formatMoney } from "@/lib/currencies";
 import { ArrowLeft, Plus, Trash2, ShoppingBag, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -63,10 +69,12 @@ function BuyList() {
   const [adding, setAdding] = useState(false);
 
   const totals = useMemo(() => {
-    let pending = 0, bought = 0;
+    let pending = 0,
+      bought = 0;
     for (const i of items) {
       const v = Number(i.price);
-      if (i.is_purchased) bought += v; else pending += v;
+      if (i.is_purchased) bought += v;
+      else pending += v;
     }
     return { pending, bought };
   }, [items]);
@@ -87,7 +95,10 @@ function BuyList() {
       if (error) throw error;
     },
     onSuccess: () => {
-      setName(""); setPrice(""); setSource(""); setNote("");
+      setName("");
+      setPrice("");
+      setSource("");
+      setNote("");
       qc.invalidateQueries({ queryKey: ["shopping_items", tripId] });
       toast.success("Item added");
     },
@@ -96,7 +107,10 @@ function BuyList() {
 
   const toggleMut = useMutation({
     mutationFn: async ({ id, val }: { id: string; val: boolean }) => {
-      const { error } = await supabase.from("shopping_items").update({ is_purchased: val }).eq("id", id);
+      const { error } = await supabase
+        .from("shopping_items")
+        .update({ is_purchased: val })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["shopping_items", tripId] }),
@@ -114,13 +128,19 @@ function BuyList() {
 
   return (
     <div>
-      <Link to="/trips/$tripId" params={{ tripId }} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/trips/$tripId"
+        params={{ tripId }}
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Back to trip
       </Link>
 
       <div className="rounded-3xl bg-card/80 p-6 shadow-glow">
         <div className="flex items-center gap-3">
-          <div className="rounded-2xl bg-primary/15 p-3"><ShoppingBag className="h-6 w-6 text-primary" /></div>
+          <div className="rounded-2xl bg-primary/15 p-3">
+            <ShoppingBag className="h-6 w-6 text-primary" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold">Buy list</h1>
             <p className="text-xs text-muted-foreground">Plan what you want to buy on this trip</p>
@@ -130,11 +150,15 @@ function BuyList() {
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-border bg-card/60 p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">To buy</div>
-            <div className="mt-1 text-xl font-semibold">{formatMoney(totals.pending, trip.currency)}</div>
+            <div className="mt-1 text-xl font-semibold">
+              {formatMoney(totals.pending, trip.currency)}
+            </div>
           </div>
           <div className="rounded-2xl border border-border bg-card/60 p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Bought</div>
-            <div className="mt-1 text-xl font-semibold text-primary">{formatMoney(totals.bought, trip.currency)}</div>
+            <div className="mt-1 text-xl font-semibold text-primary">
+              {formatMoney(totals.bought, trip.currency)}
+            </div>
           </div>
         </div>
       </div>
@@ -143,31 +167,69 @@ function BuyList() {
         <div className="mb-3 text-sm font-semibold">Add an item</div>
         <div className="grid gap-3">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Item name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sunglasses" className="h-10" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Item name
+            </Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Sunglasses"
+              className="h-10"
+            />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Price</Label>
-              <Input type="number" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" className="h-10" />
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Price
+              </Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0.00"
+                className="h-10"
+              />
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Currency</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Currency
+              </Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">From where</Label>
-            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Shop, market, website…" className="h-10" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              From where
+            </Label>
+            <Input
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              placeholder="Shop, market, website…"
+              className="h-10"
+            />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Note (optional)</Label>
-            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Size, color, brand…" className="h-10" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Note (optional)
+            </Label>
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Size, color, brand…"
+              className="h-10"
+            />
           </div>
           <Button
             disabled={!name.trim() || adding || addMut.isPending}
@@ -197,21 +259,34 @@ function BuyList() {
               <button
                 onClick={() => toggleMut.mutate({ id: i.id, val: !i.is_purchased })}
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-90 ${
-                  i.is_purchased ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"
+                  i.is_purchased
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border hover:border-primary"
                 }`}
                 title={i.is_purchased ? "Mark as not bought" : "Mark as bought"}
               >
                 {i.is_purchased && <Check className="h-4 w-4" />}
               </button>
               <div className="min-w-0 flex-1">
-                <div className={`truncate text-sm font-medium ${i.is_purchased ? "line-through" : ""}`}>{i.name}</div>
+                <div
+                  className={`truncate text-sm font-medium ${i.is_purchased ? "line-through" : ""}`}
+                >
+                  {i.name}
+                </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                  {i.source && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{i.source}</span>}
+                  {i.source && (
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {i.source}
+                    </span>
+                  )}
                   {i.note && <span className="truncate">· {i.note}</span>}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-semibold">{formatMoney(Number(i.price), i.currency)}</div>
+                <div className="text-sm font-semibold">
+                  {formatMoney(Number(i.price), i.currency)}
+                </div>
               </div>
               <button
                 onClick={() => deleteMut.mutate(i.id)}

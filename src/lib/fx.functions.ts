@@ -2,8 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 const inputSchema = z.object({
-  from: z.string().length(3).regex(/^[A-Z]{3}$/),
-  to: z.string().length(3).regex(/^[A-Z]{3}$/),
+  from: z
+    .string()
+    .length(3)
+    .regex(/^[A-Z]{3}$/),
+  to: z
+    .string()
+    .length(3)
+    .regex(/^[A-Z]{3}$/),
 });
 
 // Approximate rates per 1 USD. Used as a fallback when the live API fails,
@@ -92,4 +98,3 @@ export const getFxRate = createServerFn({ method: "GET" })
       return { rate: 1, source: "fallback" as const };
     }
   });
-

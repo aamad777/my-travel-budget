@@ -25,10 +25,15 @@ function AuthLayout() {
       }
       setReady(true);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_e, session) => {
       if (!session) navigate({ to: "/login" });
     });
-    return () => { mounted = false; subscription.unsubscribe(); };
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const signOut = async () => {
@@ -38,7 +43,11 @@ function AuthLayout() {
   };
 
   if (!ready) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
   }
   if (!authed) return null;
 
@@ -51,7 +60,9 @@ function AuthLayout() {
           </Link>
           <div className="flex items-center gap-1">
             <Button asChild variant="ghost" size="icon" title="Settings">
-              <Link to="/settings"><SettingsIcon className="h-4 w-4" /></Link>
+              <Link to="/settings">
+                <SettingsIcon className="h-4 w-4" />
+              </Link>
             </Button>
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
