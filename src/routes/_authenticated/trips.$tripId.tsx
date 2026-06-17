@@ -407,31 +407,30 @@ function TripDetail() {
         </div>
 
         <div className="mt-6 flex flex-col items-center">
-          {/* Total Spent - Main Ring */}
-          <div className="flex flex-col items-center gap-1.5">
-            <SmallRing
-              percent={pct}
-              label={formatMoney(toDisplay(totals.spent), displayCurrency)}
-              color="var(--primary)"
-            />
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Total Spent
-            </span>
-          </div>
-
-          {/* Toggle button */}
+          {/* Total Spent - Main Ring (Clickable to Expand) */}
           <button
             type="button"
             onClick={() => setShowRingDetails((prev) => !prev)}
-            className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground transition-all hover:text-foreground active:scale-95"
+            className="flex flex-col items-center gap-1.5 focus:outline-none transition-transform hover:scale-105 active:scale-95 cursor-pointer"
             aria-label={showRingDetails ? "Hide stats details" : "Show more stats details"}
           >
-            <span>{showRingDetails ? "Hide Details" : "Show Details"}</span>
-            {showRingDetails ? (
-              <ChevronUp className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5" />
-            )}
+            <div className="relative">
+              <SmallRing
+                percent={pct}
+                label={formatMoney(toDisplay(totals.spent), displayCurrency)}
+                color="var(--primary)"
+              />
+              <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
+                {showRingDetails ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+              </div>
+            </div>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Total Spent
+            </span>
           </button>
 
           {/* Collapsible stats */}
@@ -746,25 +745,26 @@ function TripDetail() {
                                   ` · ${e.expense_items!.length} item${e.expense_items!.length > 1 ? "s" : ""}`}
                               </div>
                             </div>
-                            <div
-                              className={`font-semibold ${e.kind === "income" ? "text-[color:var(--success)]" : ""}`}
-                            >
-                              {e.kind === "income" ? "+" : "−"}
-                              {formatMoney(
-                                toDisplay(Number(e.amount_in_trip_currency)),
-                                displayCurrency,
-                              )}
-                            </div>
                             <button
+                              type="button"
                               onClick={() => setExpandedId(isOpen ? null : e.id)}
-                              className="ml-1 rounded p-1 text-muted-foreground hover:text-foreground transition-all hover:scale-110 active:scale-90"
+                              className="flex items-center gap-1.5 font-semibold transition-all hover:text-primary active:scale-95 text-right cursor-pointer"
                               aria-label={isOpen ? "Hide breakdown" : "Add or view breakdown"}
                               title="Breakdown"
                             >
+                              <span
+                                className={e.kind === "income" ? "text-[color:var(--success)]" : ""}
+                              >
+                                {e.kind === "income" ? "+" : "−"}
+                                {formatMoney(
+                                  toDisplay(Number(e.amount_in_trip_currency)),
+                                  displayCurrency,
+                                )}
+                              </span>
                               {isOpen ? (
-                                <ChevronUp className="h-4 w-4" />
+                                <ChevronUp className="h-4 w-4 text-muted-foreground" />
                               ) : (
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               )}
                             </button>
                             <button
