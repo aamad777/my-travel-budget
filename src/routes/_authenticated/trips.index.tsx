@@ -32,14 +32,17 @@ function TripsList() {
       if (error) throw error;
 
       const ids = (tripRows ?? []).map((t) => t.id);
-      let spentByTrip: Record<string, number> = {};
+      const spentByTrip: Record<string, number> = {};
       if (ids.length) {
         const { data: exp } = await supabase
           .from("expenses")
           .select("trip_id,amount_in_trip_currency,kind")
           .in("trip_id", ids);
         for (const e of exp ?? []) {
-          const delta = e.kind === "income" ? -Number(e.amount_in_trip_currency) : Number(e.amount_in_trip_currency);
+          const delta =
+            e.kind === "income"
+              ? -Number(e.amount_in_trip_currency)
+              : Number(e.amount_in_trip_currency);
           spentByTrip[e.trip_id] = (spentByTrip[e.trip_id] ?? 0) + delta;
         }
       }
@@ -55,7 +58,9 @@ function TripsList() {
           <p className="text-sm text-muted-foreground">Pick a trip or start a new one.</p>
         </div>
         <Button asChild className="shadow-glow">
-          <Link to="/trips/new"><Plus className="mr-1 h-4 w-4" /> New trip</Link>
+          <Link to="/trips/new">
+            <Plus className="mr-1 h-4 w-4" /> New trip
+          </Link>
         </Button>
       </div>
 
@@ -64,9 +69,13 @@ function TripsList() {
       ) : !trips?.length ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/40 p-12 text-center">
           <h2 className="text-lg font-semibold">No trips yet</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Create your first trip to start tracking expenses.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create your first trip to start tracking expenses.
+          </p>
           <Button asChild className="mt-5">
-            <Link to="/trips/new"><Plus className="mr-1 h-4 w-4" /> Create a trip</Link>
+            <Link to="/trips/new">
+              <Plus className="mr-1 h-4 w-4" /> Create a trip
+            </Link>
           </Button>
         </div>
       ) : (
@@ -85,7 +94,9 @@ function TripsList() {
                     <h3 className="text-lg font-semibold group-hover:text-primary">{t.name}</h3>
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       {t.destination && (
-                        <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {t.destination}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {t.destination}
+                        </span>
                       )}
                       {(t.start_date || t.end_date) && (
                         <span className="inline-flex items-center gap-1">
@@ -95,10 +106,7 @@ function TripsList() {
                       )}
                     </div>
                   </div>
-                  <BudgetRing
-                    percent={pct}
-                    label={`${Math.round(pct)}%`}
-                  />
+                  <BudgetRing percent={pct} label={`${Math.round(pct)}%`} />
                 </div>
                 <div className="mt-4 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Spent</span>

@@ -41,7 +41,9 @@ function LoginPage() {
   };
 
   const google = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/trips" });
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + "/trips",
+    });
     if (result.error) return toast.error(result.error.message ?? "Google sign-in failed");
     if (result.redirected) return;
     navigate({ to: "/trips" });
@@ -58,25 +60,49 @@ function LoginPage() {
       <form onSubmit={submit} className="space-y-3">
         <div>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </div>
         <div>
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>
       <div className="mt-4 flex justify-between text-sm">
-        <Link to="/reset-password" className="text-muted-foreground hover:text-foreground">Forgot password?</Link>
-        <Link to="/signup" className="text-primary hover:underline">Create account</Link>
+        <Link to="/reset-password" className="text-muted-foreground hover:text-foreground">
+          Forgot password?
+        </Link>
+        <Link to="/signup" className="text-primary hover:underline">
+          Create account
+        </Link>
       </div>
     </AuthShell>
   );
 }
 
-export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">

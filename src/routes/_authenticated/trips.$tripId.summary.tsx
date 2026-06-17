@@ -21,13 +21,22 @@ function Summary() {
   const { data, isLoading } = useQuery({
     queryKey: ["summary", tripId],
     queryFn: async () => {
-      const [{ data: trip }, { data: expenses }, { data: cats }, { data: budgets }] = await Promise.all([
-        supabase.from("trips").select("*").eq("id", tripId).single(),
-        supabase.from("expenses").select("amount_in_trip_currency,category_id,kind,spent_at").eq("trip_id", tripId),
-        supabase.from("categories").select("id,name,color"),
-        supabase.from("category_budgets").select("id,category_id,amount").eq("trip_id", tripId),
-      ]);
-      return { trip, expenses: expenses ?? [], cats: cats ?? [], budgets: (budgets ?? []) as CatBudget[] };
+      const [{ data: trip }, { data: expenses }, { data: cats }, { data: budgets }] =
+        await Promise.all([
+          supabase.from("trips").select("*").eq("id", tripId).single(),
+          supabase
+            .from("expenses")
+            .select("amount_in_trip_currency,category_id,kind,spent_at")
+            .eq("trip_id", tripId),
+          supabase.from("categories").select("id,name,color"),
+          supabase.from("category_budgets").select("id,category_id,amount").eq("trip_id", tripId),
+        ]);
+      return {
+        trip,
+        expenses: expenses ?? [],
+        cats: cats ?? [],
+        budgets: (budgets ?? []) as CatBudget[],
+      };
     },
   });
 
@@ -40,7 +49,8 @@ function Summary() {
   const byDay: Record<string, number> = {};
   let total = 0;
   for (const e of expenses) {
-    const v = e.kind === "income" ? -Number(e.amount_in_trip_currency) : Number(e.amount_in_trip_currency);
+    const v =
+      e.kind === "income" ? -Number(e.amount_in_trip_currency) : Number(e.amount_in_trip_currency);
     total += v;
     const k = e.category_id ?? "uncategorized";
     byCat[k] = (byCat[k] ?? 0) + v;
@@ -53,7 +63,11 @@ function Summary() {
 
   return (
     <div>
-      <Link to="/trips/$tripId" params={{ tripId }} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/trips/$tripId"
+        params={{ tripId }}
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Back to trip
       </Link>
       <h1 className="text-2xl font-bold">{trip.name} — summary</h1>
@@ -75,7 +89,6 @@ function Summary() {
         endDate={trip.end_date}
       />
 
-
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold">By category</h2>
         {catEntries.length === 0 ? (
@@ -87,16 +100,22 @@ function Summary() {
               const w = Math.round((Math.abs(v) / max) * 100);
               const budget = budgetByCat[id];
               const limit = budget ? Number(budget.amount) : 0;
-              const usagePct = limit > 0 ? Math.min(100, Math.round((Math.abs(v) / limit) * 100)) : 0;
+              const usagePct =
+                limit > 0 ? Math.min(100, Math.round((Math.abs(v) / limit) * 100)) : 0;
               const overBudget = limit > 0 && Math.abs(v) > limit;
               return (
                 <div key={id} className="animate-fade-in">
                   <div className="mb-1 flex items-center justify-between gap-2 text-sm">
                     <span className="font-medium">{cat?.name ?? "Uncategorized"}</span>
-                    <span className={`font-semibold ${overBudget ? "text-destructive" : ""}`}>{formatMoney(v, trip.currency)}</span>
+                    <span className={`font-semibold ${overBudget ? "text-destructive" : ""}`}>
+                      {formatMoney(v, trip.currency)}
+                    </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-background/40">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${w}%`, backgroundColor: cat?.color ?? "var(--primary)" }} />
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${w}%`, backgroundColor: cat?.color ?? "var(--primary)" }}
+                    />
                   </div>
                   {cat && (
                     <BudgetLimitRow
@@ -123,7 +142,10 @@ function Summary() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-border bg-card/60">
             {dayEntries.map(([d, v], i) => (
-              <div key={d} className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-border/40" : ""}`}>
+              <div
+                key={d}
+                className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t border-border/40" : ""}`}
+              >
                 <span className="text-sm text-muted-foreground">{d}</span>
                 <span className="font-semibold">{formatMoney(v, trip.currency)}</span>
               </div>
@@ -136,7 +158,13 @@ function Summary() {
 }
 
 function BudgetLimitRow({
-  tripId, categoryId, currency, existing, spent, usagePct, overBudget,
+  tripId,
+  categoryId,
+  currency,
+  existing,
+  spent,
+  usagePct,
+  overBudget,
 }: {
   tripId: string;
   categoryId: string;
@@ -150,7 +178,9 @@ function BudgetLimitRow({
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(existing ? String(existing.amount) : "");
 
-  useEffect(() => { setValue(existing ? String(existing.amount) : ""); }, [existing]);
+  useEffect(() => {
+    setValue(existing ? String(existing.amount) : "");
+  }, [existing]);
 
   const saveMut = useMutation({
     mutationFn: async (amount: number) => {
@@ -163,13 +193,16 @@ function BudgetLimitRow({
         }
         return;
       }
-      const { error } = await supabase.from("category_budgets").upsert({
-        id: existing?.id,
-        user_id: u.user.id,
-        trip_id: tripId,
-        category_id: categoryId,
-        amount,
-      }, { onConflict: "trip_id,category_id" });
+      const { error } = await supabase.from("category_budgets").upsert(
+        {
+          id: existing?.id,
+          user_id: u.user.id,
+          trip_id: tripId,
+          category_id: categoryId,
+          amount,
+        },
+        { onConflict: "trip_id,category_id" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -204,13 +237,19 @@ function BudgetLimitRow({
           >
             <Check className="h-3 w-3" />
           </Button>
-          <button type="button" onClick={() => setEditing(false)} className="text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="text-muted-foreground hover:text-foreground"
+          >
             cancel
           </button>
         </>
       ) : limit > 0 ? (
         <>
-          <span className={`flex-1 ${overBudget ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+          <span
+            className={`flex-1 ${overBudget ? "text-destructive font-medium" : "text-muted-foreground"}`}
+          >
             {formatMoney(spent, currency)} / {formatMoney(limit, currency)} ({usagePct}%)
           </span>
           <div className="h-1.5 w-24 overflow-hidden rounded-full bg-background/40">
@@ -219,12 +258,20 @@ function BudgetLimitRow({
               style={{ width: `${usagePct}%` }}
             />
           </div>
-          <button type="button" onClick={() => setEditing(true)} className="text-muted-foreground hover:text-foreground underline underline-offset-2">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-muted-foreground hover:text-foreground underline underline-offset-2"
+          >
             edit
           </button>
         </>
       ) : (
-        <button type="button" onClick={() => setEditing(true)} className="text-muted-foreground hover:text-foreground underline underline-offset-2">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-muted-foreground hover:text-foreground underline underline-offset-2"
+        >
           Set budget limit
         </button>
       )}
@@ -236,14 +283,26 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "go
   return (
     <div className="rounded-2xl border border-border bg-card/70 p-5">
       <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-2xl font-bold ${tone === "bad" ? "text-destructive" : tone === "good" ? "text-[color:var(--success)]" : ""}`}>
+      <div
+        className={`mt-1 text-2xl font-bold ${tone === "bad" ? "text-destructive" : tone === "good" ? "text-[color:var(--success)]" : ""}`}
+      >
         {value}
       </div>
     </div>
   );
 }
 
-function TripEndCard({ budget, spent, currency, endDate }: { budget: number; spent: number; currency: string; endDate: string | null }) {
+function TripEndCard({
+  budget,
+  spent,
+  currency,
+  endDate,
+}: {
+  budget: number;
+  spent: number;
+  currency: string;
+  endDate: string | null;
+}) {
   const remaining = budget - spent;
   const ended = endDate ? new Date(endDate) <= new Date() : false;
   const savedPct = budget > 0 ? remaining / budget : 0;
@@ -275,9 +334,13 @@ function TripEndCard({ budget, spent, currency, endDate }: { budget: number; spe
             <Star
               key={i}
               className={`h-6 w-6 transition-all ${
-                i < stars ? "fill-yellow-400 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" : "text-muted-foreground/30"
+                i < stars
+                  ? "fill-yellow-400 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+                  : "text-muted-foreground/30"
               }`}
-              style={{ animation: i < stars ? `tap-bounce 0.5s ${i * 80}ms ease-out both` : undefined }}
+              style={{
+                animation: i < stars ? `tap-bounce 0.5s ${i * 80}ms ease-out both` : undefined,
+              }}
             />
           ))}
         </div>
@@ -296,4 +359,3 @@ function TripEndCard({ budget, spent, currency, endDate }: { budget: number; spe
     </section>
   );
 }
-

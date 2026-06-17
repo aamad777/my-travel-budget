@@ -12,7 +12,10 @@ export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
       { title: "Create account — Voyage" },
-      { name: "description", content: "Create a free Voyage account to start tracking trip budgets." },
+      {
+        name: "description",
+        content: "Create a free Voyage account to start tracking trip budgets.",
+      },
     ],
   }),
   component: SignupPage,
@@ -43,7 +46,9 @@ function SignupPage() {
   };
 
   const google = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/trips" });
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + "/trips",
+    });
     if (result.error) return toast.error(result.error.message ?? "Google sign-in failed");
     if (result.redirected) return;
     navigate({ to: "/trips" });
@@ -60,15 +65,34 @@ function SignupPage() {
       <form onSubmit={submit} className="space-y-3">
         <div>
           <Label htmlFor="name">Your name</Label>
-          <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+          <Input
+            id="name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+          />
         </div>
         <div>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </div>
         <div>
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input
+            id="password"
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Creating account…" : "Create account"}
@@ -76,7 +100,9 @@ function SignupPage() {
       </form>
       <div className="mt-4 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+        <Link to="/login" className="text-primary hover:underline">
+          Sign in
+        </Link>
       </div>
     </AuthShell>
   );

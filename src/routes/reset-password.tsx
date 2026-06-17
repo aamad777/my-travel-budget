@@ -51,20 +51,35 @@ function ResetPasswordPage() {
         <form onSubmit={sendReset} className="space-y-3">
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
           <Button className="w-full" disabled={loading}>
             {loading ? "Sending…" : "Send reset link"}
           </Button>
           <div className="text-center text-sm">
-            <Link to="/login" className="text-primary hover:underline">Back to sign in</Link>
+            <Link to="/login" className="text-primary hover:underline">
+              Back to sign in
+            </Link>
           </div>
         </form>
       ) : (
         <form onSubmit={updatePassword} className="space-y-3">
           <div>
             <Label htmlFor="password">New password</Label>
-            <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              id="password"
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
           <Button className="w-full" disabled={loading}>
             {loading ? "Updating…" : "Update password"}
