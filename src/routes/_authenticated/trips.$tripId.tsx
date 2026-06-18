@@ -255,6 +255,7 @@ function TripDetail() {
   const [maxAmount, setMaxAmount] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showRingDetails, setShowRingDetails] = useState(false);
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
   const filteredExpenses = useMemo(() => {
     const min = parseFloat(minAmount);
@@ -690,9 +691,14 @@ function TripDetail() {
               const dayIncomes = items
                 .filter((e) => e.kind === "income")
                 .reduce((s, e) => s + Number(e.amount_in_trip_currency), 0);
+              const isDayExpanded = expandedDays[day] ?? false;
               return (
-                <div key={day}>
-                  <div className="mb-2 flex items-baseline justify-between text-xs uppercase tracking-wider text-muted-foreground">
+                <div key={day} className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedDays((prev) => ({ ...prev, [day]: !prev[day] }))}
+                    className="mb-2 flex w-full items-center justify-between text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all active:scale-[0.99] cursor-pointer"
+                  >
                     <span>{format(parseISO(day), "EEE, d MMM yyyy")}</span>
                     <span className="flex items-center gap-1.5 font-medium">
                       {dayIncomes > 0 && (
@@ -708,104 +714,113 @@ function TripDetail() {
                       ) : (
                         dayIncomes === 0 && <span>{formatMoney(0, displayCurrency)}</span>
                       )}
+                      {isDayExpanded ? (
+                        <ChevronUp className="h-3.5 w-3.5 ml-1 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5 ml-1 text-muted-foreground" />
+                      )}
                     </span>
-                  </div>
-                  <div className="overflow-hidden rounded-2xl border border-border bg-card/60">
-                    {items.map((e, i) => {
-                      const cat = e.category_id ? catById[e.category_id] : null;
-                      const Icon = iconForCategory(cat?.name);
-                      const hasItems = !!e.expense_items && e.expense_items.length > 0;
-                      const isOpen = expandedId === e.id;
-                      return (
-                        <div
-                          key={e.id}
-                          className={`animate-fade-in ${i > 0 ? "border-t border-border/40" : ""}`}
-                        >
-                          <div className="flex items-center gap-3 px-4 py-3">
-                            <span
-                              className="flex h-9 w-9 items-center justify-center rounded-full"
-                              style={{
-                                backgroundColor: (cat?.color ?? "#5cbdb9") + "33",
-                                color: cat?.color ?? "#5cbdb9",
-                              }}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate font-medium">
-                                {e.note ||
-                                  cat?.name ||
-                                  (e.kind === "income" ? "Income" : "Expense")}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {cat?.name ?? "Uncategorized"}
-                                {e.currency !== trip.currency &&
-                                  ` · ${formatMoney(Number(e.amount), e.currency)}`}
-                                {hasItems &&
-                                  ` · ${e.expense_items!.length} item${e.expense_items!.length > 1 ? "s" : ""}`}
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setExpandedId(isOpen ? null : e.id)}
-                              className="flex items-center gap-1.5 font-semibold transition-all hover:text-primary active:scale-95 text-right cursor-pointer"
-                              aria-label={isOpen ? "Hide breakdown" : "Add or view breakdown"}
-                              title="Breakdown"
-                            >
+                  </button>
+                  {isDayExpanded && (
+                    <div className="overflow-hidden rounded-2xl border border-border bg-card/60 animate-pop-in">
+                      {items.map((e, i) => {
+                        const cat = e.category_id ? catById[e.category_id] : null;
+                        const Icon = iconForCategory(cat?.name);
+                        const hasItems = !!e.expense_items && e.expense_items.length > 0;
+                        const isOpen = expandedId === e.id;
+                        return (
+                          <div
+                            key={e.id}
+                            className={`animate-fade-in ${i > 0 ? "border-t border-border/40" : ""}`}
+                          >
+                            <div className="flex items-center gap-3 px-4 py-3">
                               <span
-                                className={e.kind === "income" ? "text-[color:var(--success)]" : ""}
+                                className="flex h-9 w-9 items-center justify-center rounded-full"
+                                style={{
+                                  backgroundColor: (cat?.color ?? "#5cbdb9") + "33",
+                                  color: cat?.color ?? "#5cbdb9",
+                                }}
                               >
-                                {e.kind === "income" ? "+" : "−"}
-                                {formatMoney(
-                                  toDisplay(Number(e.amount_in_trip_currency)),
-                                  displayCurrency,
-                                )}
+                                <Icon className="h-4 w-4" />
                               </span>
-                              {isOpen ? (
-                                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => deleteMut.mutate(e.id)}
-                              className="ml-1 rounded p-1 text-muted-foreground hover:text-destructive"
-                              aria-label="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                          {isOpen && (
-                            <div className="px-4 pb-3">
-                              <div className="ml-12 space-y-2 rounded-xl bg-muted/30 px-3 py-2 animate-pop-in">
-                                {e.expense_items?.map((item) => (
-                                  <div
-                                    key={item.id}
-                                    className="flex items-center justify-between gap-2 text-xs animate-fade-in"
-                                  >
-                                    <span className="flex-1 truncate text-muted-foreground">
-                                      {item.description}
-                                    </span>
-                                    <span className="font-medium">
-                                      {formatMoney(Number(item.amount), e.currency)}
-                                    </span>
-                                    <button
-                                      onClick={() => deleteItemMut.mutate(item.id)}
-                                      className="rounded p-0.5 text-muted-foreground hover:text-destructive"
-                                      aria-label="Remove item"
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                ))}
-                                <InlineItemAdder expenseId={e.id} currency={e.currency} />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-medium">
+                                  {e.note ||
+                                    cat?.name ||
+                                    (e.kind === "income" ? "Income" : "Expense")}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {cat?.name ?? "Uncategorized"}
+                                  {e.currency !== trip.currency &&
+                                    ` · ${formatMoney(Number(e.amount), e.currency)}`}
+                                  {hasItems &&
+                                    ` · ${e.expense_items!.length} item${e.expense_items!.length > 1 ? "s" : ""}`}
+                                </div>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => setExpandedId(isOpen ? null : e.id)}
+                                className="flex items-center gap-1.5 font-semibold transition-all hover:text-primary active:scale-95 text-right cursor-pointer"
+                                aria-label={isOpen ? "Hide breakdown" : "Add or view breakdown"}
+                                title="Breakdown"
+                              >
+                                <span
+                                  className={
+                                    e.kind === "income" ? "text-[color:var(--success)]" : ""
+                                  }
+                                >
+                                  {e.kind === "income" ? "+" : "−"}
+                                  {formatMoney(
+                                    toDisplay(Number(e.amount_in_trip_currency)),
+                                    displayCurrency,
+                                  )}
+                                </span>
+                                {isOpen ? (
+                                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => deleteMut.mutate(e.id)}
+                                className="ml-1 rounded p-1 text-muted-foreground hover:text-destructive"
+                                aria-label="Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            {isOpen && (
+                              <div className="px-4 pb-3">
+                                <div className="ml-12 space-y-2 rounded-xl bg-muted/30 px-3 py-2 animate-pop-in">
+                                  {e.expense_items?.map((item) => (
+                                    <div
+                                      key={item.id}
+                                      className="flex items-center justify-between gap-2 text-xs animate-fade-in"
+                                    >
+                                      <span className="flex-1 truncate text-muted-foreground">
+                                        {item.description}
+                                      </span>
+                                      <span className="font-medium">
+                                        {formatMoney(Number(item.amount), e.currency)}
+                                      </span>
+                                      <button
+                                        onClick={() => deleteItemMut.mutate(item.id)}
+                                        className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                        aria-label="Remove item"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <InlineItemAdder expenseId={e.id} currency={e.currency} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
