@@ -32,3 +32,6 @@ dist-ssr
 *.sw?
 .env
 .env.local
+
+backend-api/.env
+backend-api/node_modules/
