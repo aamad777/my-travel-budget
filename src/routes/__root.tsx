@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -11,7 +10,6 @@ import {
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -38,6 +36,7 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
@@ -67,13 +66,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Voyage — Trip Budget Tracker" },
+      { title: "Voyage - Trip Budget Tracker" },
       {
         name: "description",
         content: "Plan trip budgets and track expenses in any currency, fast.",
       },
       { name: "theme-color", content: "#0c2340" },
-      { property: "og:title", content: "Voyage — Trip Budget Tracker" },
+      { property: "og:title", content: "Voyage - Trip Budget Tracker" },
       {
         property: "og:description",
         content: "Plan trip budgets and track expenses in any currency, fast.",
@@ -113,26 +112,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AuthSync() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      router.invalidate();
-      queryClient.invalidateQueries();
-    });
-    return () => subscription.unsubscribe();
-  }, [router, queryClient]);
-  return null;
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthSync />
       <Outlet />
       <Toaster position="top-center" />
     </QueryClientProvider>

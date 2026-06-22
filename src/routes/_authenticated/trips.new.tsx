@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { tripsApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/trips/new")({
-  head: () => ({ meta: [{ title: "New Trip — Voyage" }] }),
+  head: () => ({ meta: [{ title: "New Trip - Voyage" }] }),
   component: NewTrip,
 });
 
@@ -30,32 +30,29 @@ function NewTrip() {
   const [currency, setCurrency] = useState("USD");
   const [loading, setLoading] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setLoading(true);
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) {
-      setLoading(false);
-      return toast.error("Not signed in");
-    }
-    const budgetNum = parseFloat(budget) || 0;
-    const { data, error } = await supabase
-      .from("trips")
-      .insert({
-        user_id: u.user.id,
+
+    try {
+      const budgetNum = parseFloat(budget) || 0;
+
+      const data = await tripsApi.create({
         name: name.trim(),
         destination: destination.trim() || null,
         start_date: start || null,
         end_date: end || null,
         budget_amount: budgetNum,
         currency,
-      })
-      .select("id")
-      .single();
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Trip created!");
-    navigate({ to: "/trips/$tripId", params: { tripId: data!.id } });
+      });
+
+      toast.success("Trip created!");
+      navigate({ to: "/trips/$tripId", params: { tripId: data.trip.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Create trip failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,7 +63,9 @@ function NewTrip() {
       >
         <ArrowLeft className="h-4 w-4" /> Back to trips
       </Link>
+
       <h1 className="text-2xl font-bold">New trip</h1>
+
       <form
         onSubmit={submit}
         className="mt-6 space-y-4 rounded-2xl border border-border bg-card/70 p-6"
@@ -82,6 +81,7 @@ function NewTrip() {
             placeholder="Tokyo 2026"
           />
         </div>
+
         <div>
           <Label htmlFor="dest">Destination</Label>
           <Input
@@ -92,6 +92,7 @@ function NewTrip() {
             placeholder="Tokyo, Japan"
           />
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="start">Start date</Label>
@@ -102,11 +103,13 @@ function NewTrip() {
               onChange={(e) => setStart(e.target.value)}
             />
           </div>
+
           <div>
             <Label htmlFor="end">End date</Label>
             <Input id="end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
           </div>
         </div>
+
         <div className="grid grid-cols-[1fr_140px] gap-3">
           <div>
             <Label htmlFor="budget">Budget *</Label>
@@ -120,24 +123,27 @@ function NewTrip() {
               onChange={(e) => setBudget(e.target.value)}
             />
           </div>
+
           <div>
             <Label>Currency</Label>
             <Select value={currency} onValueChange={setCurrency}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
+
               <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    {c.code} — {c.symbol}
+                {CURRENCIES.map((currencyItem) => (
+                  <SelectItem key={currencyItem.code} value={currencyItem.code}>
+                    {currencyItem.code} - {currencyItem.symbol}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
+
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating…" : "Create trip"}
+          {loading ? "Creating..." : "Create trip"}
         </Button>
       </form>
     </div>

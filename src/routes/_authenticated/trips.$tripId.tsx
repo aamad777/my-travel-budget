@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { tripsApi, expensesApi } from "@/lib/api";
 import { getFxRate } from "@/lib/fx.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,27 +143,18 @@ function TripDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const tripQuery = useQuery({
+    const tripQuery = useQuery({
     queryKey: ["trip", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("trips").select("*").eq("id", tripId).single();
-      if (error) throw error;
-      return data;
+    queryFn: async (): Promise<Trip> => {
+      const data = await tripsApi.getById(tripId);
+      return data.trip;
     },
   });
-
   const expensesQuery = useQuery({
     queryKey: ["expenses", tripId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select(
-          "id,amount,currency,amount_in_trip_currency,fx_rate_to_trip,category_id,note,spent_at,kind,expense_items(id,expense_id,description,amount)",
-        )
-        .eq("trip_id", tripId)
-        .order("spent_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as Expense[];
+    queryFn: async (): Promise<Expense[]> => {
+      const data = await expensesApi.list(tripId);
+      return data.expenses;
     },
   });
 
@@ -330,23 +322,28 @@ function TripDetail() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("expenses").delete().eq("id", id);
-      if (error) throw error;
+      await expensesApi.delete(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["trips"] });
       toast.success("Deleted");
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Delete expense failed");
+    },
   });
 
   const deleteItemMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("expense_items").delete().eq("id", id);
-      if (error) throw error;
+      await expensesApi.deleteItem(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
+      toast.success("Item deleted");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Delete item failed");
     },
   });
 
@@ -360,6 +357,15 @@ function TripDetail() {
   };
 
   if (tripQuery.isLoading) return <div className="text-muted-foreground">Loading…</div>;
+    if (tripQuery.error) {
+    return (
+      <div>
+        Trip load error:{" "}
+        {tripQuery.error instanceof Error ? tripQuery.error.message : "Unknown error"}
+      </div>
+    );
+  }
+
   if (!trip) return <div>Trip not found.</div>;
 
   return (
@@ -965,38 +971,25 @@ function QuickAddSheet({
         if (r.source === "fallback") toast.warning("Couldn't fetch live FX rate — using 1:1.");
       }
       const converted = Math.round(n * rate * 100) / 100;
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const { data: inserted, error } = await supabase
-        .from("expenses")
-        .insert({
-          trip_id: tripId,
-          user_id: u.user.id,
-          amount: n,
-          currency,
-          fx_rate_to_trip: rate,
-          amount_in_trip_currency: converted,
-          category_id: categoryId || null,
-          note: note.trim() || null,
-          spent_at: new Date(date + "T12:00:00").toISOString(),
-          kind,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
 
-      const validItems = items.filter((it) => it.description.trim() && parseFloat(it.amount) > 0);
-      if (validItems.length > 0) {
-        const { error: itemErr } = await supabase.from("expense_items").insert(
-          validItems.map((it) => ({
-            expense_id: inserted.id,
-            user_id: u.user!.id,
-            description: it.description.trim(),
-            amount: parseFloat(it.amount),
-          })),
-        );
-        if (itemErr) throw itemErr;
-      }
+      const validItems = items
+        .filter((it) => it.description.trim() && parseFloat(it.amount) > 0)
+        .map((it) => ({
+          description: it.description.trim(),
+          amount: parseFloat(it.amount),
+        }));
+
+      await expensesApi.create(tripId, {
+        amount: n,
+        currency,
+        fx_rate_to_trip: rate,
+        amount_in_trip_currency: converted,
+        category_id: categoryId || null,
+        note: note.trim() || null,
+        spent_at: new Date(date + "T12:00:00").toISOString(),
+        kind,
+        items: validItems,
+      });
 
       qc.invalidateQueries({ queryKey: ["expenses", tripId] });
       qc.invalidateQueries({ queryKey: ["trips"] });
@@ -1245,15 +1238,10 @@ function InlineItemAdder({ expenseId, currency }: { expenseId: string; currency:
     if (!desc.trim() || !isFinite(n) || n <= 0) return toast.error("Enter description and amount");
     setSaving(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase.from("expense_items").insert({
-        expense_id: expenseId,
-        user_id: u.user.id,
+      await expensesApi.addItem(expenseId, {
         description: desc.trim(),
         amount: n,
       });
-      if (error) throw error;
       setDesc("");
       setAmt("");
       qc.invalidateQueries({ queryKey: ["expenses"] });
@@ -1295,3 +1283,5 @@ function InlineItemAdder({ expenseId, currency }: { expenseId: string; currency:
     </div>
   );
 }
+
+
