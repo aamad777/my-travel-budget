@@ -138,18 +138,26 @@ export function BudgetRing({
   percent,
   label,
   sub,
+  timePct,
 }: {
   percent: number;
   label: string;
   sub?: string;
+  timePct?: number;
 }) {
   const p = Math.max(0, Math.min(100, percent));
   const r = 70;
   const c = 2 * Math.PI * r;
   const offset = c - (p / 100) * c;
+  // Inner time ring
+  const rTime = 56;
+  const cTime = 2 * Math.PI * rTime;
+  const tp = timePct != null ? Math.max(0, Math.min(100, timePct)) : null;
+  const timeOffset = tp != null ? cTime - (tp / 100) * cTime : cTime;
   return (
     <div className="relative h-44 w-44">
       <svg viewBox="0 0 160 160" className="h-44 w-44 -rotate-90">
+        {/* Budget track */}
         <circle
           cx="80"
           cy="80"
@@ -159,6 +167,7 @@ export function BudgetRing({
           strokeWidth="14"
           fill="none"
         />
+        {/* Budget arc */}
         <circle
           cx="80"
           cy="80"
@@ -171,6 +180,32 @@ export function BudgetRing({
           strokeLinecap="round"
           style={{ transition: "stroke-dashoffset 600ms ease" }}
         />
+        {/* Time progress - inner ring */}
+        {tp != null && (
+          <>
+            <circle
+              cx="80"
+              cy="80"
+              r={rTime}
+              stroke="currentColor"
+              strokeOpacity="0.08"
+              strokeWidth="5"
+              fill="none"
+            />
+            <circle
+              cx="80"
+              cy="80"
+              r={rTime}
+              stroke="var(--muted-foreground)"
+              strokeWidth="5"
+              fill="none"
+              strokeDasharray={cTime}
+              strokeDashoffset={timeOffset}
+              strokeLinecap="round"
+              style={{ transition: "stroke-dashoffset 600ms ease", opacity: 0.5 }}
+            />
+          </>
+        )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="text-2xl font-bold">{label}</div>

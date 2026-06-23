@@ -65,7 +65,7 @@ function SignupPage() {
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
-            type="email"
+            type="text"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}

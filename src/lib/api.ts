@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 const TOKEN_KEY = "travel_budget_token";
 
@@ -36,10 +35,7 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-async function apiRequest<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
 
   const headers: Record<string, string> = {
@@ -58,7 +54,7 @@ async function apiRequest<T>(
 
   const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
+  if (!response.ok) {
     const details = data.error || data.message || JSON.stringify(data) || "No response body";
     throw new Error(`API ${response.status} ${response.statusText}: ${details}`);
   }
@@ -67,31 +63,21 @@ async function apiRequest<T>(
 }
 
 export const authApi = {
-  async signup(input: {
-    email: string;
-    password: string;
-    displayName?: string;
-  }) {
-    const data = await apiRequest<{ user: LocalUser; token: string }>(
-      "/auth/signup",
-      {
-        method: "POST",
-        body: JSON.stringify(input),
-      }
-    );
+  async signup(input: { email: string; password: string; displayName?: string }) {
+    const data = await apiRequest<{ user: LocalUser; token: string }>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
 
     setToken(data.token);
     return data;
   },
 
   async login(input: { email: string; password: string }) {
-    const data = await apiRequest<{ user: LocalUser; token: string }>(
-      "/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify(input),
-      }
-    );
+    const data = await apiRequest<{ user: LocalUser; token: string }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
 
     setToken(data.token);
     return data;
@@ -174,7 +160,7 @@ export const expensesApi = {
         description?: string | null;
         amount?: number;
       }>;
-    }
+    },
   ) {
     return apiRequest<{ expense: Expense }>(`/trips/${tripId}/expenses`, {
       method: "POST",
@@ -193,7 +179,7 @@ export const expensesApi = {
     input: {
       description?: string | null;
       amount?: number;
-    }
+    },
   ) {
     return apiRequest<{ item: ExpenseItem }>(`/expenses/${expenseId}/items`, {
       method: "POST",

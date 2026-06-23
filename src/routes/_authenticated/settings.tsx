@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 export type ThemeKey = "sunset" | "ocean" | "forest" | "midnight" | "cherry" | "coral";
 
 const THEMES: { key: ThemeKey; label: string; stops: string[] }[] = [
-  { key: "sunset", label: "Sunset Blaze", stops: ["#ff6b35", "#f7931e", "#e84393", "#6c5ce7"] },
+  { key: "sunset", label: "Pro Navy", stops: ["#0d1520", "#111c2e", "#1a2d4a", "#c8922a"] },
   { key: "ocean", label: "Ocean Deep", stops: ["#0c2340", "#1a4a6e", "#2d8a9e", "#5cbdb9"] },
   { key: "forest", label: "Forest & Moss", stops: ["#1a3c2a", "#2d5a3d", "#5a8a5c", "#a0c49d"] },
   {

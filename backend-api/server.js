@@ -31,7 +31,7 @@ function createToken(user) {
     jwtSecret,
     {
       expiresIn: "7d",
-    }
+    },
   );
 }
 
@@ -106,7 +106,7 @@ app.post("/auth/signup", async (req, res) => {
       VALUES ($1, $2)
       RETURNING id, email, created_at
       `,
-      [normalizedEmail, passwordHash]
+      [normalizedEmail, passwordHash],
     );
 
     const user = userResult.rows[0];
@@ -116,7 +116,7 @@ app.post("/auth/signup", async (req, res) => {
       INSERT INTO profiles (id, display_name, default_currency)
       VALUES ($1, $2, $3)
       `,
-      [user.id, displayName || null, "USD"]
+      [user.id, displayName || null, "USD"],
     );
 
     const token = createToken(user);
@@ -159,7 +159,7 @@ app.post("/auth/login", async (req, res) => {
       FROM users
       WHERE email = $1
       `,
-      [normalizedEmail]
+      [normalizedEmail],
     );
 
     const user = result.rows[0];
@@ -212,7 +212,7 @@ app.get("/auth/me", requireAuth, async (req, res) => {
       LEFT JOIN profiles p ON p.id = u.id
       WHERE u.id = $1
       `,
-      [req.user.userId]
+      [req.user.userId],
     );
 
     const user = result.rows[0];
@@ -259,7 +259,7 @@ app.get("/trips", requireAuth, async (req, res) => {
       WHERE user_id = $1
       ORDER BY created_at DESC
       `,
-      [req.user.userId]
+      [req.user.userId],
     );
 
     res.json({
@@ -299,7 +299,7 @@ app.get("/trips/:id", requireAuth, async (req, res) => {
       WHERE id = $1
         AND user_id = $2
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     const trip = result.rows[0];
@@ -325,14 +325,7 @@ app.get("/trips/:id", requireAuth, async (req, res) => {
 
 app.post("/trips", requireAuth, async (req, res) => {
   try {
-    const {
-      name,
-      destination,
-      currency,
-      budget_amount,
-      start_date,
-      end_date,
-    } = req.body;
+    const { name, destination, currency, budget_amount, start_date, end_date } = req.body;
 
     if (!name) {
       return res.status(400).json({
@@ -372,7 +365,7 @@ app.post("/trips", requireAuth, async (req, res) => {
         budget_amount || 0,
         start_date || null,
         end_date || null,
-      ]
+      ],
     );
 
     res.status(201).json({
@@ -397,7 +390,7 @@ app.delete("/trips/:id", requireAuth, async (req, res) => {
         AND user_id = $2
       RETURNING id
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     if (!result.rows[0]) {
@@ -432,7 +425,7 @@ app.get("/trips/:id/expenses", requireAuth, async (req, res) => {
       WHERE id = $1
         AND user_id = $2
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     if (!tripCheck.rows[0]) {
@@ -461,7 +454,7 @@ app.get("/trips/:id/expenses", requireAuth, async (req, res) => {
         AND user_id = $2
       ORDER BY spent_at DESC, created_at DESC
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     const expenses = expensesResult.rows;
@@ -488,7 +481,7 @@ app.get("/trips/:id/expenses", requireAuth, async (req, res) => {
         AND user_id = $2
       ORDER BY created_at ASC
       `,
-      [expenseIds, req.user.userId]
+      [expenseIds, req.user.userId],
     );
 
     const itemsByExpense = {};
@@ -538,7 +531,7 @@ app.post("/trips/:id/expenses", requireAuth, async (req, res) => {
       WHERE id = $1
         AND user_id = $2
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     if (!tripCheck.rows[0]) {
@@ -587,7 +580,7 @@ app.post("/trips/:id/expenses", requireAuth, async (req, res) => {
         kind || "expense",
         note || null,
         spent_at || new Date().toISOString(),
-      ]
+      ],
     );
 
     const expense = expenseResult.rows[0];
@@ -615,12 +608,7 @@ app.post("/trips/:id/expenses", requireAuth, async (req, res) => {
             amount,
             created_at
           `,
-          [
-            req.user.userId,
-            expense.id,
-            item.description || null,
-            item.amount || 0,
-          ]
+          [req.user.userId, expense.id, item.description || null, item.amount || 0],
         );
 
         insertedItems.push(itemResult.rows[0]);
@@ -651,7 +639,7 @@ app.delete("/expenses/:id", requireAuth, async (req, res) => {
       WHERE expense_id = $1
         AND user_id = $2
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     const result = await pool.query(
@@ -661,7 +649,7 @@ app.delete("/expenses/:id", requireAuth, async (req, res) => {
         AND user_id = $2
       RETURNING id
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     if (!result.rows[0]) {
@@ -694,7 +682,7 @@ app.post("/expenses/:id/items", requireAuth, async (req, res) => {
       WHERE id = $1
         AND user_id = $2
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     if (!expenseCheck.rows[0]) {
@@ -720,12 +708,7 @@ app.post("/expenses/:id/items", requireAuth, async (req, res) => {
         amount,
         created_at
       `,
-      [
-        req.user.userId,
-        req.params.id,
-        description || null,
-        amount || 0,
-      ]
+      [req.user.userId, req.params.id, description || null, amount || 0],
     );
 
     res.status(201).json({
@@ -750,7 +733,7 @@ app.delete("/expense-items/:id", requireAuth, async (req, res) => {
         AND user_id = $2
       RETURNING id
       `,
-      [req.params.id, req.user.userId]
+      [req.params.id, req.user.userId],
     );
 
     if (!result.rows[0]) {

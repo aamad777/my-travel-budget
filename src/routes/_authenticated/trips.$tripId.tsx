@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { tripsApi, expensesApi } from "@/lib/api";
+import { tripsApi, expensesApi, type Trip, type Expense, type ExpenseItem } from "@/lib/api";
 import { getFxRate } from "@/lib/fx.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,61 @@ import {
   ChevronDown,
   ChevronUp,
   type LucideIcon,
+  UtensilsCrossed,
+  Pizza,
+  Salad,
+  IceCream2,
+  Wine,
+  Sandwich,
+  Bike,
+  Sailboat,
+  TramFront,
+  Hotel,
+  Tent,
+  Home,
+  Palmtree,
+  Mountain,
+  Landmark,
+  TreePine,
+  Sunset,
+  Waves,
+  Gamepad2,
+  BookOpen,
+  Scissors,
+  Backpack,
+  Luggage,
+  Umbrella,
+  SunMedium,
+  Zap,
+  Star,
+  Heart,
+  Globe,
+  Map as MapIcon,
+  Clock,
+  Timer,
+  AlarmClock,
+  Receipt,
+  ShoppingCart,
+  Store,
+  Package,
+  Gem,
+  Coins,
+  DollarSign,
+  Euro,
+  Building,
+  Factory,
+  Hammer,
+  Paintbrush,
+  Microscope,
+  FlaskConical,
+  Sticker,
+  Trophy,
+  Medal,
+  Swords,
+  Anchor,
+  Compass,
+  Navigation,
+  Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -74,60 +129,152 @@ export const Route = createFileRoute("/_authenticated/trips/$tripId")({
   component: TripDetail,
 });
 
-type ExpenseItem = {
-  id: string;
-  expense_id: string;
-  description: string;
-  amount: number;
-};
 
-type Expense = {
-  id: string;
-  amount: number;
-  currency: string;
-  amount_in_trip_currency: number;
-  fx_rate_to_trip: number;
-  category_id: string | null;
-  note: string | null;
-  spent_at: string;
-  kind: "expense" | "income";
-  expense_items: ExpenseItem[] | null;
-};
 
 type Category = { id: string; name: string; icon: string; color: string; is_preset: boolean };
 
 const CATEGORY_ICON_MAP: { match: RegExp; icon: LucideIcon }[] = [
   { match: /coffee|cafe|tea/i, icon: Coffee },
-  { match: /beer|bar|drink|alcohol|wine|pub/i, icon: Beer },
+  { match: /beer|bar|drink|alcohol|pub/i, icon: Beer },
+  { match: /wine/i, icon: Wine },
+  { match: /pizza/i, icon: Pizza },
+  { match: /salad|vegetarian|vegan/i, icon: Salad },
+  { match: /icecream|dessert|sweet/i, icon: IceCream2 },
+  { match: /sandwich|fast.?food|burger/i, icon: Sandwich },
   { match: /food|meal|restaurant|eat|dining|grocer/i, icon: Utensils },
   { match: /flight|plane|air/i, icon: Plane },
   { match: /train|rail|metro|subway/i, icon: Train },
+  { match: /tram/i, icon: TramFront },
   { match: /boat|ferry|cruise|ship/i, icon: Ship },
+  { match: /sail/i, icon: Sailboat },
+  { match: /bike|cycling|cycle/i, icon: Bike },
   { match: /fuel|gas|petrol/i, icon: Fuel },
   { match: /car|taxi|uber|rental|drive/i, icon: Car },
   { match: /bus|transport|transit|commut/i, icon: Bus },
-  { match: /hotel|lodg|stay|hostel|airbnb|accommod|room/i, icon: BedDouble },
+  { match: /hotel|lodg|hostel|airbnb|accommod|room/i, icon: Hotel },
+  { match: /tent|camping|camp/i, icon: Tent },
+  { match: /stay|home/i, icon: Home },
   { match: /activit|tour|ticket|event|attraction|museum/i, icon: Ticket },
+  { match: /landmark|monument|historic/i, icon: Landmark },
+  { match: /beach|ocean|sea|coast/i, icon: Waves },
+  { match: /mountain|hik|trek/i, icon: Mountain },
+  { match: /park|nature|forest/i, icon: TreePine },
+  { match: /palm|tropical|island/i, icon: Palmtree },
+  { match: /sunset|sunrise/i, icon: Sunset },
   { match: /movie|cinema|film/i, icon: Film },
   { match: /music|concert/i, icon: Music },
   { match: /photo|camera/i, icon: Camera },
+  { match: /game|gaming/i, icon: Gamepad2 },
+  { match: /book|read|library/i, icon: BookOpen },
+  { match: /sport|gym|fitness/i, icon: Dumbbell },
+  { match: /trophy|award|win/i, icon: Trophy },
   { match: /shop|store|mall|market/i, icon: ShoppingBag },
   { match: /cloth|shirt|wear|fashion/i, icon: Shirt },
   { match: /gift|present/i, icon: Gift },
+  { match: /gem|jewelry/i, icon: Gem },
   { match: /health|medic|pharma/i, icon: HeartPulse },
   { match: /doctor|hospital|clinic/i, icon: Stethoscope },
   { match: /wifi|internet|data/i, icon: Wifi },
   { match: /phone|sim|call/i, icon: Phone },
-  { match: /gym|fitness|sport/i, icon: Dumbbell },
   { match: /pet|dog|cat/i, icon: PawPrint },
   { match: /baby|kid|child/i, icon: Baby },
   { match: /repair|fix|service/i, icon: Wrench },
   { match: /cash|withdraw|atm|bank/i, icon: Banknote },
   { match: /card|fee/i, icon: CreditCard },
   { match: /saving|deposit/i, icon: PiggyBank },
+  { match: /coin|change/i, icon: Coins },
   { match: /work|business|office/i, icon: Briefcase },
   { match: /school|educat|course|class/i, icon: GraduationCap },
+  { match: /backpack|bag/i, icon: Backpack },
+  { match: /luggage|suitcase/i, icon: Luggage },
   { match: /other|misc/i, icon: Sparkles },
+];
+
+// Extended icon palette for category picker
+export const CATEGORY_ICON_PALETTE: { label: string; icon: LucideIcon }[] = [
+  { label: "Food", icon: Utensils },
+  { label: "Restaurant", icon: UtensilsCrossed },
+  { label: "Coffee", icon: Coffee },
+  { label: "Beer", icon: Beer },
+  { label: "Wine", icon: Wine },
+  { label: "Pizza", icon: Pizza },
+  { label: "Salad", icon: Salad },
+  { label: "Ice Cream", icon: IceCream2 },
+  { label: "Sandwich", icon: Sandwich },
+  { label: "Plane", icon: Plane },
+  { label: "Train", icon: Train },
+  { label: "Tram", icon: TramFront },
+  { label: "Ship", icon: Ship },
+  { label: "Sailboat", icon: Sailboat },
+  { label: "Car", icon: Car },
+  { label: "Bus", icon: Bus },
+  { label: "Bike", icon: Bike },
+  { label: "Fuel", icon: Fuel },
+  { label: "Hotel", icon: Hotel },
+  { label: "Tent", icon: Tent },
+  { label: "Home", icon: Home },
+  { label: "Bed", icon: BedDouble },
+  { label: "Beach", icon: Waves },
+  { label: "Mountain", icon: Mountain },
+  { label: "Forest", icon: TreePine },
+  { label: "Palm", icon: Palmtree },
+  { label: "Landmark", icon: Landmark },
+  { label: "Sunset", icon: Sunset },
+  { label: "Map", icon: MapIcon },
+  { label: "Navigation", icon: Navigation },
+  { label: "Compass", icon: Compass },
+  { label: "Anchor", icon: Anchor },
+  { label: "Flag", icon: Flag },
+  { label: "Globe", icon: Globe },
+  { label: "Ticket", icon: Ticket },
+  { label: "Film", icon: Film },
+  { label: "Music", icon: Music },
+  { label: "Camera", icon: Camera },
+  { label: "Gaming", icon: Gamepad2 },
+  { label: "Book", icon: BookOpen },
+  { label: "Sport", icon: Dumbbell },
+  { label: "Trophy", icon: Trophy },
+  { label: "Medal", icon: Medal },
+  { label: "Shopping", icon: ShoppingBag },
+  { label: "Cart", icon: ShoppingCart },
+  { label: "Store", icon: Store },
+  { label: "Package", icon: Package },
+  { label: "Clothes", icon: Shirt },
+  { label: "Gift", icon: Gift },
+  { label: "Gem", icon: Gem },
+  { label: "Scissors", icon: Scissors },
+  { label: "Backpack", icon: Backpack },
+  { label: "Luggage", icon: Luggage },
+  { label: "Umbrella", icon: Umbrella },
+  { label: "Health", icon: HeartPulse },
+  { label: "Doctor", icon: Stethoscope },
+  { label: "Phone", icon: Phone },
+  { label: "Wifi", icon: Wifi },
+  { label: "Pet", icon: PawPrint },
+  { label: "Baby", icon: Baby },
+  { label: "Repair", icon: Wrench },
+  { label: "Hammer", icon: Hammer },
+  { label: "Cash", icon: Banknote },
+  { label: "Card", icon: CreditCard },
+  { label: "Savings", icon: PiggyBank },
+  { label: "Coins", icon: Coins },
+  { label: "Dollar", icon: DollarSign },
+  { label: "Euro", icon: Euro },
+  { label: "Receipt", icon: Receipt },
+  { label: "Work", icon: Briefcase },
+  { label: "Building", icon: Building },
+  { label: "Education", icon: GraduationCap },
+  { label: "Science", icon: FlaskConical },
+  { label: "Star", icon: Star },
+  { label: "Heart", icon: Heart },
+  { label: "Sparkles", icon: Sparkles },
+  { label: "Zap", icon: Zap },
+  { label: "Sticker", icon: Sticker },
+  { label: "Timer", icon: Timer },
+  { label: "Clock", icon: Clock },
+  { label: "Tag", icon: Tag },
+  { label: "Sun", icon: SunMedium },
+  { label: "Swords", icon: Swords },
 ];
 
 function iconForCategory(name?: string | null): LucideIcon {
@@ -143,7 +290,7 @@ function TripDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-    const tripQuery = useQuery({
+  const tripQuery = useQuery({
     queryKey: ["trip", tripId],
     queryFn: async (): Promise<Trip> => {
       const data = await tripsApi.getById(tripId);
@@ -357,7 +504,7 @@ function TripDetail() {
   };
 
   if (tripQuery.isLoading) return <div className="text-muted-foreground">Loading…</div>;
-    if (tripQuery.error) {
+  if (tripQuery.error) {
     return (
       <div>
         Trip load error:{" "}
@@ -426,6 +573,11 @@ function TripDetail() {
                 percent={pct}
                 label={formatMoney(toDisplay(totals.spent), displayCurrency)}
                 color="var(--primary)"
+                timePct={
+                  todayStats?.hasDates && todayStats.totalDays > 0
+                    ? (todayStats.daysPassed / todayStats.totalDays) * 100
+                    : undefined
+                }
               />
               <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
                 {showRingDetails ? (
@@ -438,6 +590,13 @@ function TripDetail() {
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Total Spent
             </span>
+            {todayStats?.hasDates && todayStats.totalDays > 0 && (
+              <span className="text-[9px] text-muted-foreground/70 mt-0.5">
+                {todayStats.totalDays - todayStats.daysPassed > 0
+                  ? `${todayStats.totalDays - todayStats.daysPassed}d left`
+                  : "Trip ended"}
+              </span>
+            )}
           </button>
 
           {/* Collapsible stats */}
@@ -479,6 +638,20 @@ function TripDetail() {
                   {totals.remaining >= 0 ? "Remaining" : "Over Budget"}
                 </span>
               </div>
+
+              {/* Time Progress */}
+              {todayStats?.hasDates && todayStats.totalDays > 0 && (
+                <div className="flex flex-col items-center gap-1.5">
+                  <SmallRing
+                    percent={(todayStats.daysPassed / todayStats.totalDays) * 100}
+                    label={`${todayStats.daysPassed}/${todayStats.totalDays}d`}
+                    color="var(--accent)"
+                  />
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Time
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -837,14 +1010,30 @@ function TripDetail() {
   );
 }
 
-function SmallRing({ percent, label, color }: { percent: number; label: string; color: string }) {
+function SmallRing({
+  percent,
+  label,
+  color,
+  timePct,
+}: {
+  percent: number;
+  label: string;
+  color: string;
+  timePct?: number;
+}) {
   const p = Math.max(0, Math.min(100, percent));
   const r = 44;
   const c = 2 * Math.PI * r;
   const offset = c - (p / 100) * c;
+  // Time arc — drawn on a slightly larger radius (outer ring)
+  const rTime = 36;
+  const cTime = 2 * Math.PI * rTime;
+  const tp = timePct != null ? Math.max(0, Math.min(100, timePct)) : null;
+  const timeOffset = tp != null ? cTime - (tp / 100) * cTime : cTime;
   return (
     <div className="relative h-28 w-28">
       <svg viewBox="0 0 100 100" className="h-28 w-28 -rotate-90">
+        {/* Track */}
         <circle
           cx="50"
           cy="50"
@@ -854,6 +1043,7 @@ function SmallRing({ percent, label, color }: { percent: number; label: string; 
           strokeWidth="9"
           fill="none"
         />
+        {/* Budget arc */}
         <circle
           cx="50"
           cy="50"
@@ -869,6 +1059,35 @@ function SmallRing({ percent, label, color }: { percent: number; label: string; 
             filter: `drop-shadow(0 0 6px ${color}88)`,
           }}
         />
+        {/* Time progress — inner ring */}
+        {tp != null && (
+          <>
+            <circle
+              cx="50"
+              cy="50"
+              r={rTime}
+              stroke="currentColor"
+              strokeOpacity="0.08"
+              strokeWidth="4"
+              fill="none"
+            />
+            <circle
+              cx="50"
+              cy="50"
+              r={rTime}
+              stroke="var(--muted-foreground)"
+              strokeWidth="4"
+              fill="none"
+              strokeDasharray={cTime}
+              strokeDashoffset={timeOffset}
+              strokeLinecap="round"
+              style={{
+                transition: "stroke-dashoffset 700ms cubic-bezier(0.4,0,0.2,1)",
+                opacity: 0.55,
+              }}
+            />
+          </>
+        )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center px-1">
         <span
@@ -1117,41 +1336,16 @@ function QuickAddSheet({
 
           <div>
             <Label>Category</Label>
-            <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
-              {categories.map((c) => {
-                const active = categoryId === c.id;
-                const Icon = iconForCategory(c.name);
-                const color = c.color ?? "#5cbdb9";
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setCategoryId(c.id);
-                      setTappedCategory(c.id);
-                      setTimeout(() => setTappedCategory(null), 400);
-                    }}
-                    className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 animate-fade-in ${
-                      active
-                        ? "border-transparent shadow-glow"
-                        : "border-border bg-card/60 hover:border-primary/50"
-                    } ${tappedCategory === c.id ? "animate-tap-bounce" : ""}`}
-                    style={active ? { backgroundColor: color + "22", color } : undefined}
-                  >
-                    <span
-                      className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${active ? "scale-110" : "group-hover:scale-110"}`}
-                      style={{ backgroundColor: color + "33", color }}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="truncate max-w-full">
-                      {c.name}
-                      {!c.is_preset && " ✦"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <CategoryPicker
+              categories={categories}
+              selected={categoryId}
+              onSelect={(id) => {
+                setCategoryId(id);
+                setTappedCategory(id);
+                setTimeout(() => setTappedCategory(null), 400);
+              }}
+              tappedCategory={tappedCategory}
+            />
           </div>
 
           <div>
@@ -1284,4 +1478,148 @@ function InlineItemAdder({ expenseId, currency }: { expenseId: string; currency:
   );
 }
 
+// ─── CategoryPicker ─────────────────────────────────────────────────────────
+function CategoryPicker({
+  categories,
+  selected,
+  onSelect,
+  tappedCategory,
+}: {
+  categories: Category[];
+  selected: string;
+  onSelect: (id: string) => void;
+  tappedCategory: string | null;
+}) {
+  const [tab, setTab] = useState<"categories" | "icons">("categories");
+  const [iconSearch, setIconSearch] = useState("");
 
+  const filteredPalette = iconSearch.trim()
+    ? CATEGORY_ICON_PALETTE.filter((p) =>
+        p.label.toLowerCase().includes(iconSearch.trim().toLowerCase()),
+      )
+    : CATEGORY_ICON_PALETTE;
+
+  return (
+    <div className="mt-2 space-y-3">
+      {/* Tab switcher */}
+      <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setTab("categories")}
+          className={`rounded-full px-3 py-1 transition-colors ${
+            tab === "categories"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          My Categories
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("icons")}
+          className={`rounded-full px-3 py-1 transition-colors ${
+            tab === "icons"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Browse Icons
+        </button>
+      </div>
+
+      {tab === "categories" ? (
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          {categories.map((c) => {
+            const active = selected === c.id;
+            const Icon = iconForCategory(c.name);
+            const color = c.color ?? "#5cbdb9";
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onSelect(c.id)}
+                className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
+                  active
+                    ? "border-transparent shadow-glow"
+                    : "border-border bg-card/60 hover:border-primary/50"
+                } ${tappedCategory === c.id ? "animate-tap-bounce" : ""}`}
+                style={active ? { backgroundColor: color + "22", color } : undefined}
+              >
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${
+                    active ? "scale-110" : "group-hover:scale-110"
+                  }`}
+                  style={{ backgroundColor: color + "33", color }}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="truncate max-w-full leading-tight text-center">
+                  {c.name}
+                  {!c.is_preset && " ✦"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Icon search */}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={iconSearch}
+              onChange={(e) => setIconSearch(e.target.value)}
+              placeholder="Search icons…"
+              className="w-full rounded-lg border border-border bg-card/60 pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          {/* Icon palette grid */}
+          <div className="max-h-56 overflow-y-auto rounded-xl border border-border bg-card/30 p-2">
+            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+              {filteredPalette.map(({ label, icon: Icon }) => {
+                // Check if any category with this icon name is selected
+                const matchedCat = categories.find(
+                  (c) =>
+                    iconForCategory(c.name) === Icon ||
+                    c.name.toLowerCase().includes(label.toLowerCase()),
+                );
+                const isActiveCat = matchedCat && selected === matchedCat.id;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    title={label}
+                    onClick={() => {
+                      // If a matching category exists, select it; otherwise pick the first unmatched
+                      if (matchedCat) {
+                        onSelect(matchedCat.id);
+                      } else if (categories.length > 0) {
+                        onSelect(categories[0].id);
+                      }
+                    }}
+                    className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-[9px] transition-all hover:scale-110 active:scale-95 ${
+                      isActiveCat
+                        ? "bg-primary/20 text-primary ring-1 ring-primary"
+                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="leading-tight truncate w-full text-center">{label}</span>
+                  </button>
+                );
+              })}
+              {filteredPalette.length === 0 && (
+                <div className="col-span-full py-6 text-center text-xs text-muted-foreground">
+                  No icons match "{iconSearch}"
+                </div>
+              )}
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Tap an icon to select the matching category. Add categories in Settings.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
