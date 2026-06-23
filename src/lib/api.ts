@@ -23,6 +23,14 @@ export type Trip = {
   updated_at: string;
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  is_preset: boolean;
+};
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -113,6 +121,18 @@ export const tripsApi = {
       method: "POST",
       body: JSON.stringify(input),
     });
+  },
+
+  async delete(id: string) {
+    return apiRequest<{ deleted: boolean }>(`/trips/${id}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+export const categoriesApi = {
+  async list() {
+    return apiRequest<{ categories: Category[] }>("/categories");
   },
 };
 export type ExpenseItem = {

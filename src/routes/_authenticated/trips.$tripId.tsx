@@ -1,8 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { tripsApi, expensesApi, type Trip, type Expense, type ExpenseItem } from "@/lib/api";
+import { tripsApi, expensesApi, categoriesApi, type Trip, type Expense, type ExpenseItem } from "@/lib/api";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -234,14 +233,9 @@ function TripDetail() {
 
   const categoriesQuery = useQuery({
     queryKey: ["categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id,name,icon,color,is_preset")
-        .order("is_preset", { ascending: false })
-        .order("name");
-      if (error) throw error;
-      return (data ?? []) as Category[];
+    queryFn: async (): Promise<Category[]> => {
+      const data = await categoriesApi.list();
+      return data.categories;
     },
   });
 
@@ -428,11 +422,15 @@ function TripDetail() {
 
   const deleteTrip = async () => {
     if (!confirm("Delete this trip and all its expenses?")) return;
-    const { error } = await supabase.from("trips").delete().eq("id", tripId);
-    if (error) return toast.error(error.message);
-    qc.invalidateQueries({ queryKey: ["trips"] });
-    toast.success("Trip deleted");
-    navigate({ to: "/trips" });
+
+    try {
+      await tripsApi.delete(tripId);
+      qc.invalidateQueries({ queryKey: ["trips"] });
+      toast.success("Trip deleted");
+      navigate({ to: "/trips" });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete trip");
+    }
   };
 
   if (tripQuery.isLoading) return <div className="text-muted-foreground">Loading…</div>;
