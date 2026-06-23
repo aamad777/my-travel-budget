@@ -21,6 +21,8 @@ RUN npm config set registry https://registry.npmjs.org/ \
 
 COPY . .
 
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
 FROM node:22-alpine AS runtime
