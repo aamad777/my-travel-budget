@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { tripsApi, expensesApi, type Trip, type Expense, type ExpenseItem } from "@/lib/api";
-import { getFxRate } from "@/lib/fx.functions";
+import { isFeatureEnabled } from "@/lib/featureFlags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -190,91 +189,19 @@ const CATEGORY_ICON_MAP: { match: RegExp; icon: LucideIcon }[] = [
   { match: /other|misc/i, icon: Sparkles },
 ];
 
-// Extended icon palette for category picker
-export const CATEGORY_ICON_PALETTE: { label: string; icon: LucideIcon }[] = [
-  { label: "Food", icon: Utensils },
-  { label: "Restaurant", icon: UtensilsCrossed },
-  { label: "Coffee", icon: Coffee },
-  { label: "Beer", icon: Beer },
-  { label: "Wine", icon: Wine },
-  { label: "Pizza", icon: Pizza },
-  { label: "Salad", icon: Salad },
-  { label: "Ice Cream", icon: IceCream2 },
-  { label: "Sandwich", icon: Sandwich },
-  { label: "Plane", icon: Plane },
-  { label: "Train", icon: Train },
-  { label: "Tram", icon: TramFront },
-  { label: "Ship", icon: Ship },
-  { label: "Sailboat", icon: Sailboat },
-  { label: "Car", icon: Car },
-  { label: "Bus", icon: Bus },
-  { label: "Bike", icon: Bike },
-  { label: "Fuel", icon: Fuel },
-  { label: "Hotel", icon: Hotel },
-  { label: "Tent", icon: Tent },
-  { label: "Home", icon: Home },
-  { label: "Bed", icon: BedDouble },
-  { label: "Beach", icon: Waves },
-  { label: "Mountain", icon: Mountain },
-  { label: "Forest", icon: TreePine },
-  { label: "Palm", icon: Palmtree },
-  { label: "Landmark", icon: Landmark },
-  { label: "Sunset", icon: Sunset },
-  { label: "Map", icon: MapIcon },
-  { label: "Navigation", icon: Navigation },
-  { label: "Compass", icon: Compass },
-  { label: "Anchor", icon: Anchor },
-  { label: "Flag", icon: Flag },
-  { label: "Globe", icon: Globe },
-  { label: "Ticket", icon: Ticket },
-  { label: "Film", icon: Film },
-  { label: "Music", icon: Music },
-  { label: "Camera", icon: Camera },
-  { label: "Gaming", icon: Gamepad2 },
-  { label: "Book", icon: BookOpen },
-  { label: "Sport", icon: Dumbbell },
-  { label: "Trophy", icon: Trophy },
-  { label: "Medal", icon: Medal },
-  { label: "Shopping", icon: ShoppingBag },
-  { label: "Cart", icon: ShoppingCart },
-  { label: "Store", icon: Store },
-  { label: "Package", icon: Package },
-  { label: "Clothes", icon: Shirt },
-  { label: "Gift", icon: Gift },
-  { label: "Gem", icon: Gem },
-  { label: "Scissors", icon: Scissors },
-  { label: "Backpack", icon: Backpack },
-  { label: "Luggage", icon: Luggage },
-  { label: "Umbrella", icon: Umbrella },
-  { label: "Health", icon: HeartPulse },
-  { label: "Doctor", icon: Stethoscope },
-  { label: "Phone", icon: Phone },
-  { label: "Wifi", icon: Wifi },
-  { label: "Pet", icon: PawPrint },
-  { label: "Baby", icon: Baby },
-  { label: "Repair", icon: Wrench },
-  { label: "Hammer", icon: Hammer },
-  { label: "Cash", icon: Banknote },
-  { label: "Card", icon: CreditCard },
-  { label: "Savings", icon: PiggyBank },
-  { label: "Coins", icon: Coins },
-  { label: "Dollar", icon: DollarSign },
-  { label: "Euro", icon: Euro },
-  { label: "Receipt", icon: Receipt },
-  { label: "Work", icon: Briefcase },
-  { label: "Building", icon: Building },
-  { label: "Education", icon: GraduationCap },
-  { label: "Science", icon: FlaskConical },
-  { label: "Star", icon: Star },
-  { label: "Heart", icon: Heart },
-  { label: "Sparkles", icon: Sparkles },
-  { label: "Zap", icon: Zap },
-  { label: "Sticker", icon: Sticker },
-  { label: "Timer", icon: Timer },
-  { label: "Clock", icon: Clock },
-  { label: "Tag", icon: Tag },
-  { label: "Sun", icon: SunMedium },
-  { label: "Swords", icon: Swords },
+// Preset built-in categories for the picker (shown when the user has none or as extras)
+export const PRESET_CATEGORIES: { label: string; icon: LucideIcon; color: string }[] = [
+  { label: "Food", icon: Utensils, color: "#f97316" },
+  { label: "Transport", icon: Bus, color: "#3b82f6" },
+  { label: "Hotel", icon: BedDouble, color: "#8b5cf6" },
+  { label: "Shopping", icon: ShoppingBag, color: "#ec4899" },
+  { label: "Activities", icon: Ticket, color: "#14b8a6" },
+  { label: "Coffee", icon: Coffee, color: "#a16207" },
+  { label: "Health", icon: HeartPulse, color: "#ef4444" },
+  { label: "Flight", icon: Plane, color: "#6366f1" },
+  { label: "Fuel", icon: Fuel, color: "#f59e0b" },
+  { label: "Groceries", icon: ShoppingCart, color: "#22c55e" },
+  { label: "Other", icon: Tag, color: "#64748b" },
 ];
 
 function iconForCategory(name?: string | null): LucideIcon {
@@ -437,7 +364,12 @@ function TripDetail() {
   const [displayCurrency, setDisplayCurrency] = useState<string>(trip?.currency ?? "USD");
   const [displayRate, setDisplayRate] = useState<number>(1);
   const [displayRateLoading, setDisplayRateLoading] = useState(false);
-  const fetchFx = useServerFn(getFxRate);
+  const fetchFx = async ({ data }: { data: { from: string; to: string } }) => {
+    return {
+      rate: data.from === data.to ? 1 : 1,
+      source: "temporary-client-fallback",
+    };
+  };
 
   useEffect(() => {
     if (trip?.currency) setDisplayCurrency(trip.currency);
@@ -904,7 +836,7 @@ function TripDetail() {
                     <div className="overflow-hidden rounded-2xl border border-border bg-card/60 animate-pop-in">
                       {items.map((e, i) => {
                         const cat = e.category_id ? catById[e.category_id] : null;
-                        const Icon = iconForCategory(cat?.name);
+                        const Icon = isFeatureEnabled("newCategoryIcons") ? iconForCategory(cat?.icon || cat?.name) : iconForCategory(cat?.name);
                         const hasItems = !!e.expense_items && e.expense_items.length > 0;
                         const isOpen = expandedId === e.id;
                         return (
@@ -1116,7 +1048,12 @@ function QuickAddSheet({
   categories: Category[];
 }) {
   const qc = useQueryClient();
-  const fetchFx = useServerFn(getFxRate);
+  const fetchFx = async ({ data }: { data: { from: string; to: string } }) => {
+    return {
+      rate: data.from === data.to ? 1 : 1,
+      source: "temporary-client-fallback",
+    };
+  };
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState(tripCurrency);
   const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
@@ -1490,136 +1427,112 @@ function CategoryPicker({
   onSelect: (id: string) => void;
   tappedCategory: string | null;
 }) {
-  const [tab, setTab] = useState<"categories" | "icons">("categories");
-  const [iconSearch, setIconSearch] = useState("");
+  // Build display list: user's own categories first, then fill in presets that don't overlap
+  const userCatNames = new Set(categories.map((c) => c.name.toLowerCase()));
+  const extraPresets = PRESET_CATEGORIES.filter(
+    (p) => !userCatNames.has(p.label.toLowerCase()),
+  );
 
-  const filteredPalette = iconSearch.trim()
-    ? CATEGORY_ICON_PALETTE.filter((p) =>
-        p.label.toLowerCase().includes(iconSearch.trim().toLowerCase()),
-      )
-    : CATEGORY_ICON_PALETTE;
+  // None = deselect
+  const isNone = !selected;
 
   return (
-    <div className="mt-2 space-y-3">
-      {/* Tab switcher */}
-      <div className="inline-flex rounded-full border border-border bg-card/60 p-1 text-xs">
+    <div className="mt-2">
+      <div className="grid grid-cols-4 gap-2">
+        {/* None chip */}
         <button
           type="button"
-          onClick={() => setTab("categories")}
-          className={`rounded-full px-3 py-1 transition-colors ${
-            tab === "categories"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
+          onClick={() => onSelect("")}
+          className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
+            isNone
+              ? "border-transparent bg-muted/40 text-foreground shadow-glow"
+              : "border-border bg-card/60 text-muted-foreground hover:border-primary/40"
           }`}
         >
-          My Categories
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/50">
+            <Tag className="h-4 w-4" />
+          </span>
+          <span>None</span>
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("icons")}
-          className={`rounded-full px-3 py-1 transition-colors ${
-            tab === "icons"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Browse Icons
-        </button>
-      </div>
 
-      {tab === "categories" ? (
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-          {categories.map((c) => {
-            const active = selected === c.id;
-            const Icon = iconForCategory(c.name);
-            const color = c.color ?? "#5cbdb9";
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => onSelect(c.id)}
-                className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
-                  active
-                    ? "border-transparent shadow-glow"
-                    : "border-border bg-card/60 hover:border-primary/50"
-                } ${tappedCategory === c.id ? "animate-tap-bounce" : ""}`}
-                style={active ? { backgroundColor: color + "22", color } : undefined}
+        {/* User's saved categories */}
+        {categories.map((c) => {
+          const active = selected === c.id;
+          const Icon = isFeatureEnabled("newCategoryIcons") ? iconForCategory(c.icon || c.name) : iconForCategory(c.name);
+          const color = c.color ?? "#5cbdb9";
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onSelect(c.id)}
+              className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
+                active
+                  ? "border-transparent shadow-glow"
+                  : "border-border bg-card/60 hover:border-primary/50"
+              } ${tappedCategory === c.id ? "animate-tap-bounce" : ""}`}
+              style={active ? { backgroundColor: color + "22", color } : undefined}
+            >
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${
+                  active ? "scale-110" : "group-hover:scale-110"
+                }`}
+                style={{ backgroundColor: color + "33", color }}
               >
-                <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${
-                    active ? "scale-110" : "group-hover:scale-110"
-                  }`}
-                  style={{ backgroundColor: color + "33", color }}
-                >
-                  <Icon className="h-4 w-4" />
-                </span>
-                <span className="truncate max-w-full leading-tight text-center">
-                  {c.name}
-                  {!c.is_preset && " ✦"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {/* Icon search */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={iconSearch}
-              onChange={(e) => setIconSearch(e.target.value)}
-              placeholder="Search icons…"
-              className="w-full rounded-lg border border-border bg-card/60 pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          {/* Icon palette grid */}
-          <div className="max-h-56 overflow-y-auto rounded-xl border border-border bg-card/30 p-2">
-            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
-              {filteredPalette.map(({ label, icon: Icon }) => {
-                // Check if any category with this icon name is selected
-                const matchedCat = categories.find(
-                  (c) =>
-                    iconForCategory(c.name) === Icon ||
-                    c.name.toLowerCase().includes(label.toLowerCase()),
-                );
-                const isActiveCat = matchedCat && selected === matchedCat.id;
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    title={label}
-                    onClick={() => {
-                      // If a matching category exists, select it; otherwise pick the first unmatched
-                      if (matchedCat) {
-                        onSelect(matchedCat.id);
-                      } else if (categories.length > 0) {
-                        onSelect(categories[0].id);
-                      }
-                    }}
-                    className={`flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-[9px] transition-all hover:scale-110 active:scale-95 ${
-                      isActiveCat
-                        ? "bg-primary/20 text-primary ring-1 ring-primary"
-                        : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="leading-tight truncate w-full text-center">{label}</span>
-                  </button>
-                );
-              })}
-              {filteredPalette.length === 0 && (
-                <div className="col-span-full py-6 text-center text-xs text-muted-foreground">
-                  No icons match "{iconSearch}"
-                </div>
-              )}
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            Tap an icon to select the matching category. Add categories in Settings.
-          </p>
-        </div>
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="truncate max-w-full leading-tight text-center">{c.name}</span>
+            </button>
+          );
+        })}
+
+        {/* Built-in preset pills (non-functional category label only) */}
+        {extraPresets.map((p) => {
+          const Icon = p.icon;
+          // Find a matching existing category by name, or use first category as fallback
+          const matchedCat = categories.find((c) =>
+            c.name.toLowerCase().includes(p.label.toLowerCase()),
+          );
+          const isActive = matchedCat ? selected === matchedCat.id : false;
+          return (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => {
+                if (matchedCat) onSelect(matchedCat.id);
+                // If no matching category, select nothing — user can add in Settings
+              }}
+              title={matchedCat ? undefined : "Add this category in Settings first"}
+              className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
+                isActive
+                  ? "border-transparent shadow-glow"
+                  : matchedCat
+                    ? "border-border bg-card/60 hover:border-primary/50"
+                    : "border-border border-dashed bg-card/30 text-muted-foreground opacity-60"
+              }`}
+              style={isActive ? { backgroundColor: p.color + "22", color: p.color } : undefined}
+            >
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ backgroundColor: p.color + "22", color: p.color }}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="truncate max-w-full leading-tight text-center">{p.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {extraPresets.some((p) => !categories.find((c) => c.name.toLowerCase().includes(p.label.toLowerCase()))) && (
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          Dashed tiles = add category in Settings to enable.
+        </p>
       )}
     </div>
   );
 }
+
+
+
+
+
+
