@@ -28,6 +28,7 @@ import {
   X,
   Search,
   SlidersHorizontal,
+  Pencil,
   Utensils,
   Bus,
   BedDouble,
@@ -211,6 +212,23 @@ function iconForCategory(name?: string | null): LucideIcon {
   return Tag;
 }
 
+/** Resolve display info from a category_id (DB UUID or PRESET:label) */
+function resolveCatDisplay(
+  categoryId: string | null | undefined,
+  categories: Category[],
+): { name: string; color: string; Icon: LucideIcon } {
+  if (!categoryId) return { name: "Uncategorized", color: "#5cbdb9", Icon: Tag };
+  if (categoryId.startsWith("PRESET:")) {
+    const label = categoryId.slice(7);
+    const preset = PRESET_CATEGORIES.find((p) => p.label === label);
+    if (preset) return { name: preset.label, color: preset.color, Icon: preset.icon };
+    return { name: label, color: "#5cbdb9", Icon: Tag };
+  }
+  const cat = categories.find((c) => c.id === categoryId);
+  if (cat) return { name: cat.name, color: cat.color ?? "#5cbdb9", Icon: iconForCategory(cat.name) };
+  return { name: "Uncategorized", color: "#5cbdb9", Icon: Tag };
+}
+
 function TripDetail() {
   const { tripId } = Route.useParams();
   const navigate = useNavigate();
@@ -354,6 +372,7 @@ function TripDetail() {
   const catById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
   const [open, setOpen] = useState<null | "expense" | "income">(null);
+  const [editExpense, setEditExpense] = useState<Expense | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [displayCurrency, setDisplayCurrency] = useState<string>(trip?.currency ?? "USD");
   const [displayRate, setDisplayRate] = useState<number>(1);
@@ -657,6 +676,20 @@ function TripDetail() {
         </div>
       </div>
 
+      {/* Spending Breakdown Chart */}
+      <SpendingChart expenses={expenses} categories={categories} currency={trip.currency} />
+
+      {/* Edit Expense Sheet */}
+      {editExpense && (
+        <EditExpenseSheet
+          expense={editExpense}
+          tripId={tripId}
+          tripCurrency={trip.currency}
+          categories={categories}
+          onClose={() => setEditExpense(null)}
+        />
+      )}
+
       <div className="mt-8">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Activity</h2>
@@ -833,8 +866,7 @@ function TripDetail() {
                   {isDayExpanded && (
                     <div className="overflow-hidden rounded-2xl border border-border bg-card/60 animate-pop-in">
                       {items.map((e, i) => {
-                        const cat = e.category_id ? catById[e.category_id] : null;
-                        const Icon = isFeatureEnabled("newCategoryIcons") ? iconForCategory(cat?.icon || cat?.name) : iconForCategory(cat?.name);
+                        const { name: catName, color: catColor, Icon } = resolveCatDisplay(e.category_id, categories);
                         const hasItems = !!e.expense_items && e.expense_items.length > 0;
                         const isOpen = expandedId === e.id;
                         return (
@@ -846,20 +878,18 @@ function TripDetail() {
                               <span
                                 className="flex h-9 w-9 items-center justify-center rounded-full"
                                 style={{
-                                  backgroundColor: (cat?.color ?? "#5cbdb9") + "33",
-                                  color: cat?.color ?? "#5cbdb9",
+                                  backgroundColor: catColor + "33",
+                                  color: catColor,
                                 }}
                               >
                                 <Icon className="h-4 w-4" />
                               </span>
                               <div className="min-w-0 flex-1">
                                 <div className="truncate font-medium">
-                                  {e.note ||
-                                    cat?.name ||
-                                    (e.kind === "income" ? "Income" : "Expense")}
+                                  {e.note || catName || (e.kind === "income" ? "Income" : "Expense")}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {cat?.name ?? "Uncategorized"}
+                                  {catName}
                                   {e.currency !== trip.currency &&
                                     ` · ${formatMoney(Number(e.amount), e.currency)}`}
                                   {hasItems &&
@@ -891,8 +921,16 @@ function TripDetail() {
                                 )}
                               </button>
                               <button
+                                onClick={() => setEditExpense(e)}
+                                className="rounded p-1 text-muted-foreground hover:text-primary"
+                                aria-label="Edit expense"
+                                title="Edit"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
                                 onClick={() => deleteMut.mutate(e.id)}
-                                className="ml-1 rounded p-1 text-muted-foreground hover:text-destructive"
+                                className="rounded p-1 text-muted-foreground hover:text-destructive"
                                 aria-label="Delete"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -1425,13 +1463,13 @@ function CategoryPicker({
   onSelect: (id: string) => void;
   tappedCategory: string | null;
 }) {
-  // Build display list: user's own categories first, then fill in presets that don't overlap
-  const userCatNames = new Set(categories.map((c) => c.name.toLowerCase()));
+  // Merge DB categories with presets. Presets use id "PRESET:Label".
+  // DB categories override a preset with the same name.
+  const dbNames = new Set(categories.map((c) => c.name.toLowerCase()));
   const extraPresets = PRESET_CATEGORIES.filter(
-    (p) => !userCatNames.has(p.label.toLowerCase()),
+    (p) => !dbNames.has(p.label.toLowerCase()),
   );
 
-  // None = deselect
   const isNone = !selected;
 
   return (
@@ -1453,10 +1491,10 @@ function CategoryPicker({
           <span>None</span>
         </button>
 
-        {/* User's saved categories */}
+        {/* User DB categories */}
         {categories.map((c) => {
           const active = selected === c.id;
-          const Icon = isFeatureEnabled("newCategoryIcons") ? iconForCategory(c.icon || c.name) : iconForCategory(c.name);
+          const Icon = iconForCategory(c.name);
           const color = c.color ?? "#5cbdb9";
           return (
             <button
@@ -1464,9 +1502,7 @@ function CategoryPicker({
               type="button"
               onClick={() => onSelect(c.id)}
               className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
-                active
-                  ? "border-transparent shadow-glow"
-                  : "border-border bg-card/60 hover:border-primary/50"
+                active ? "border-transparent shadow-glow" : "border-border bg-card/60 hover:border-primary/50"
               } ${tappedCategory === c.id ? "animate-tap-bounce" : ""}`}
               style={active ? { backgroundColor: color + "22", color } : undefined}
             >
@@ -1483,34 +1519,25 @@ function CategoryPicker({
           );
         })}
 
-        {/* Built-in preset pills (non-functional category label only) */}
+        {/* Preset categories — always clickable, stored as PRESET:label */}
         {extraPresets.map((p) => {
+          const presetId = `PRESET:${p.label}`;
+          const active = selected === presetId;
           const Icon = p.icon;
-          // Find a matching existing category by name, or use first category as fallback
-          const matchedCat = categories.find((c) =>
-            c.name.toLowerCase().includes(p.label.toLowerCase()),
-          );
-          const isActive = matchedCat ? selected === matchedCat.id : false;
           return (
             <button
               key={p.label}
               type="button"
-              onClick={() => {
-                if (matchedCat) onSelect(matchedCat.id);
-                // If no matching category, select nothing — user can add in Settings
-              }}
-              title={matchedCat ? undefined : "Add this category in Settings first"}
-              className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
-                isActive
-                  ? "border-transparent shadow-glow"
-                  : matchedCat
-                    ? "border-border bg-card/60 hover:border-primary/50"
-                    : "border-border border-dashed bg-card/30 text-muted-foreground opacity-60"
-              }`}
-              style={isActive ? { backgroundColor: p.color + "22", color: p.color } : undefined}
+              onClick={() => onSelect(active ? "" : presetId)}
+              className={`group flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 ${
+                active ? "border-transparent shadow-glow" : "border-border bg-card/60 hover:border-primary/50"
+              } ${tappedCategory === presetId ? "animate-tap-bounce" : ""}`}
+              style={active ? { backgroundColor: p.color + "22", color: p.color } : undefined}
             >
               <span
-                className="flex h-9 w-9 items-center justify-center rounded-full"
+                className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${
+                  active ? "scale-110" : "group-hover:scale-110"
+                }`}
                 style={{ backgroundColor: p.color + "22", color: p.color }}
               >
                 <Icon className="h-4 w-4" />
@@ -1520,15 +1547,208 @@ function CategoryPicker({
           );
         })}
       </div>
-      {extraPresets.some((p) => !categories.find((c) => c.name.toLowerCase().includes(p.label.toLowerCase()))) && (
-        <p className="mt-2 text-[10px] text-muted-foreground">
-          Dashed tiles = add category in Settings to enable.
-        </p>
-      )}
     </div>
   );
 }
 
+// ─── SpendingChart ───────────────────────────────────────────────────────────
+function SpendingChart({
+  expenses,
+  categories,
+  currency,
+}: {
+  expenses: Expense[];
+  categories: Category[];
+  currency: string;
+}) {
+  const byCategory = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of expenses) {
+      if (e.kind !== "expense") continue;
+      const key = e.category_id || "none";
+      map.set(key, (map.get(key) ?? 0) + Number(e.amount_in_trip_currency));
+    }
+    return Array.from(map.entries())
+      .map(([id, total]) => {
+        const { name, color, Icon } = resolveCatDisplay(id === "none" ? null : id, categories);
+        return { id, name, color, Icon, total };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [expenses, categories]);
+
+  const grandTotal = byCategory.reduce((s, c) => s + c.total, 0);
+
+  if (!byCategory.length) return null;
+
+  return (
+    <div className="mt-6 rounded-2xl border border-border bg-card/60 p-4">
+      <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+        <BarChart3 className="h-4 w-4 text-primary" /> Spending by Category
+      </h3>
+      <div className="space-y-2">
+        {byCategory.map((c) => {
+          const pct = grandTotal > 0 ? (c.total / grandTotal) * 100 : 0;
+          const Icon = c.Icon;
+          return (
+            <div key={c.id} className="flex items-center gap-2">
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: c.color + "33", color: c.color }}
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="mb-0.5 flex items-center justify-between gap-1 text-xs">
+                  <span className="truncate font-medium">{c.name}</span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {formatMoney(c.total, currency)} · {pct.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, backgroundColor: c.color }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── EditExpenseSheet ────────────────────────────────────────────────────────
+function EditExpenseSheet({
+  expense,
+  tripId,
+  tripCurrency,
+  categories,
+  onClose,
+}: {
+  expense: Expense;
+  tripId: string;
+  tripCurrency: string;
+  categories: Category[];
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [amount, setAmount] = useState(String(expense.amount));
+  const [currency, setCurrency] = useState(expense.currency);
+  const [categoryId, setCategoryId] = useState(expense.category_id ?? "");
+  const [note, setNote] = useState(expense.note ?? "");
+  const [date, setDate] = useState(expense.spent_at.slice(0, 10));
+  const [saving, setSaving] = useState(false);
+  const [tappedCategory, setTappedCategory] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const n = parseFloat(amount);
+    if (!isFinite(n) || n <= 0) return toast.error("Enter an amount greater than 0");
+    setSaving(true);
+    try {
+      await expensesApi.delete(expense.id);
+      await expensesApi.create(tripId, {
+        amount: n,
+        currency,
+        fx_rate_to_trip: 1,
+        amount_in_trip_currency: n,
+        category_id: categoryId || null,
+        note: note.trim() || null,
+        spent_at: new Date(date + "T12:00:00").toISOString(),
+        kind: expense.kind,
+      });
+      qc.invalidateQueries({ queryKey: ["expenses", tripId] });
+      qc.invalidateQueries({ queryKey: ["trips"] });
+      toast.success("Expense updated");
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Sheet open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-3xl">
+        <SheetHeader>
+          <SheetTitle>Edit {expense.kind === "income" ? "Income" : "Expense"}</SheetTitle>
+        </SheetHeader>
+        <form onSubmit={submit} className="mt-4 space-y-4 pb-6">
+          <div className="grid grid-cols-[1fr_120px] gap-3">
+            <div>
+              <Label htmlFor="edit-amt">Amount</Label>
+              <Input
+                id="edit-amt"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0.01"
+                autoFocus
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="text-2xl font-semibold"
+              />
+            </div>
+            <div>
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label>Category</Label>
+            <CategoryPicker
+              categories={categories}
+              selected={categoryId}
+              onSelect={(id) => {
+                setCategoryId(id);
+                setTappedCategory(id);
+                setTimeout(() => setTappedCategory(null), 400);
+              }}
+              tappedCategory={tappedCategory}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-note">Note (optional)</Label>
+            <Textarea
+              id="edit-note"
+              rows={2}
+              maxLength={300}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="What was this for?"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-date">Date</Label>
+            <Input id="edit-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 
 
