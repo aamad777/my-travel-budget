@@ -493,20 +493,33 @@ function TripDetail() {
             </div>
           </div>
           <div className="flex gap-1">
-            <Button asChild variant="ghost" size="icon" title="Buy list">
-              <Link to="/trips/$tripId/buy" params={{ tripId }}>
-                <ShoppingBag className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" size="icon" title="Summary">
-              <Link to="/trips/$tripId/summary" params={{ tripId }}>
-                <BarChart3 className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={deleteTrip} title="Delete trip">
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
+  <Button asChild variant="ghost" size="icon" title="Buy list">
+    <Link to="/trips/$tripId/buy" params={{ tripId }}>
+      <ShoppingBag className="h-4 w-4" />
+    </Link>
+  </Button>
+
+  <Button asChild variant="ghost" size="icon" title="Summary">
+    <Link to="/trips/$tripId/summary" params={{ tripId }}>
+      <BarChart3 className="h-4 w-4" />
+    </Link>
+  </Button>
+
+  {isFeatureEnabled("newCategoryIcons") && (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={() => alert("EXPORT FEATURE IS ON")}
+      title="Export JSON"
+    >
+      Export
+    </Button>
+  )}
+
+  <Button variant="ghost" size="icon" onClick={deleteTrip} title="Delete trip">
+    <Trash2 className="h-4 w-4 text-destructive" />
+  </Button>
+</div>
         </div>
 
         <div className="mt-6 flex flex-col items-center">
@@ -1749,6 +1762,7 @@ function EditExpenseSheet({
     </Sheet>
   );
 }
+
 
 
 
