@@ -276,6 +276,53 @@ function SettingsPage() {
           </Button>
         </div>
       </section>
+
+      <section className="rounded-2xl border border-border bg-card/70 p-6">
+        <h2 className="text-lg font-semibold">Data & Privacy</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Export your trips, expenses, and profile data in a machine-readable format.
+        </p>
+        <div className="mt-4">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const { data: u } = await supabase.auth.getUser();
+                if (!u.user) throw new Error("Not signed in");
+                
+                // Fetch all data
+                const [profileRes, tripsRes, expensesRes, categoriesRes] = await Promise.all([
+                  supabase.from("profiles").select("*").eq("id", u.user.id).single(),
+                  supabase.from("trips").select("*").eq("user_id", u.user.id),
+                  supabase.from("expenses").select("*, expense_items(*)").eq("user_id", u.user.id),
+                  supabase.from("categories").select("*").eq("user_id", u.user.id)
+                ]);
+
+                const exportData = {
+                  export_date: new Date().toISOString(),
+                  profile: profileRes.data,
+                  trips: tripsRes.data,
+                  expenses: expensesRes.data,
+                  categories: categoriesRes.data
+                };
+
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `voyage-export-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success("Data exported successfully");
+              } catch (e: any) {
+                toast.error(e.message || "Failed to export data");
+              }
+            }}
+          >
+            Export my data (JSON)
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

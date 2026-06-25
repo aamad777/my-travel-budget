@@ -130,7 +130,7 @@ export const Route = createFileRoute("/_authenticated/trips/$tripId")({
 
 
 
-type Category = { id: string; name: string; icon: string; color: string; is_preset: boolean };
+type Category = { id: string; name: string; icon: string | null; color: string | null; is_preset: boolean };
 
 const CATEGORY_ICON_MAP: { match: RegExp; icon: LucideIcon }[] = [
   { match: /coffee|cafe|tea/i, icon: Coffee },
@@ -227,6 +227,19 @@ function resolveCatDisplay(
   const cat = categories.find((c) => c.id === categoryId);
   if (cat) return { name: cat.name, color: cat.color ?? "#5cbdb9", Icon: iconForCategory(cat.name) };
   return { name: "Uncategorized", color: "#5cbdb9", Icon: Tag };
+}
+
+/**
+ * Convert a UI-only category ID (real UUID or "PRESET:Label") into the real
+ * UUID the backend expects, or null if it's an unmatched preset.
+ * This prevents FK violations when saving expenses.
+ */
+function resolveApiCategoryId(categoryId: string, categories: Category[]): string | null {
+  if (!categoryId) return null;
+  if (!categoryId.startsWith("PRESET:")) return categoryId; // already a real UUID
+  const label = categoryId.slice(7);
+  const match = categories.find((c) => c.name.toLowerCase() === label.toLowerCase());
+  return match ? match.id : null;
 }
 
 function TripDetail() {
@@ -1105,7 +1118,7 @@ function QuickAddSheet({
   };
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState(tripCurrency);
-  const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
+  const [categoryId, setCategoryId] = useState<string>("");
   const [note, setNote] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
@@ -1189,7 +1202,7 @@ function QuickAddSheet({
         currency,
         fx_rate_to_trip: rate,
         amount_in_trip_currency: converted,
-        category_id: categoryId || null,
+        category_id: resolveApiCategoryId(categoryId, categories),
         note: note.trim() || null,
         spent_at: new Date(date + "T12:00:00").toISOString(),
         kind,
@@ -1667,7 +1680,7 @@ function EditExpenseSheet({
         currency,
         fx_rate_to_trip: 1,
         amount_in_trip_currency: n,
-        category_id: categoryId || null,
+        category_id: resolveApiCategoryId(categoryId, categories),
         note: note.trim() || null,
         spent_at: new Date(date + "T12:00:00").toISOString(),
         kind: expense.kind,
