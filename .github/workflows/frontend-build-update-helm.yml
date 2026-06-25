@@ -1,0 +1,70 @@
+name: Build Frontend and Update Helm Tag
+
+on:
+  push:
+    branches:
+      - ui-next-update
+    paths:
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "Dockerfile"
+      - ".github/workflows/frontend-build-update-helm.yml"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-update-helm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tag
+        id: vars
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_TAG="frontend-${SHORT_SHA}"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build frontend Docker image
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL=https://travel-api.dad-ai.online \
+            -t ghcr.io/aamad777/my-travel-budget:${{ steps.vars.outputs.image_tag }} \
+            .
+
+      - name: Push frontend Docker image
+        run: |
+          docker push ghcr.io/aamad777/my-travel-budget:${{ steps.vars.outputs.image_tag }}
+
+      - name: Update Helm image tag
+        run: |
+          sed -i "s/^    tag: .*/    tag: ${{ steps.vars.outputs.image_tag }}/" k8s/helm/my-travel-budget/values.yaml
+
+      - name: Commit updated Helm values
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add k8s/helm/my-travel-budget/values.yaml
+
+          if git diff --cached --quiet; then
+            echo "No Helm tag change to commit."
+          else
+            git commit -m "Update frontend image tag to ${{ steps.vars.outputs.image_tag }}"
+            git push
+          fi
