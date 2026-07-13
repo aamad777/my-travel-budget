@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "build:azure": "vite build --config vite.config.azure.ts",
     "build:dev": "vite build --mode development",
-    "start": "node dist/server/server.js",
+    "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
