@@ -37,12 +37,12 @@ jobs:
           if [ ! -f ".output/server/index.mjs" ]; then
             echo "ERROR: .output/server/index.mjs was not created."
             echo "Available build files:"
-            find . -maxdepth 4 -type f | sort
+            find . -maxdepth 5 -type f | sort
             exit 1
           fi
 
           echo "Azure Node server output confirmed:"
-          find .output -maxdepth 4 -type f -print
+          find .output -maxdepth 5 -type f -print
 
       - name: Prepare deployment package
         run: |
@@ -60,6 +60,7 @@ jobs:
         with:
           name: tanstack-azure-package
           path: deployment
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
 
