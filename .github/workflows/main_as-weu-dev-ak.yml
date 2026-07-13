@@ -1,6 +1,10 @@
 name: Inspect TanStack build output
 
 on:
+  push:
+    branches:
+      - azure-appservice-deploy
+
   workflow_dispatch:
 
 jobs:
@@ -26,10 +30,10 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Show complete build output
+      - name: Show build output
         run: |
           echo "===== DIST DIRECTORIES ====="
-          find dist -maxdepth 5 -type d -print
+          find dist -maxdepth 6 -type d -print
 
           echo "===== DIST FILES ====="
-          find dist -maxdepth 5 -type f -print
+          find dist -maxdepth 6 -type f -print
