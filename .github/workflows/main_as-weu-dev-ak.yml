@@ -26,55 +26,63 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
       - name: Validate Supabase secrets
         env:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           if [ -z "$VITE_SUPABASE_URL" ]; then
-            echo "ERROR: SUPABASE_URL secret is missing."
+            echo "ERROR: GitHub secret SUPABASE_URL is missing."
             exit 1
           fi
 
           if [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "ERROR: SUPABASE_PUBLISHABLE_KEY secret is missing."
+            echo "ERROR: GitHub secret SUPABASE_PUBLISHABLE_KEY is missing."
             exit 1
           fi
 
-          echo "Both Supabase secrets are available."
-          echo "URL length: ${#VITE_SUPABASE_URL}"
-          echo "Key length: ${#VITE_SUPABASE_PUBLISHABLE_KEY}"
+          echo "Supabase secrets are available to the workflow."
+          echo "Supabase URL length: ${#VITE_SUPABASE_URL}"
+          echo "Supabase key length: ${#VITE_SUPABASE_PUBLISHABLE_KEY}"
+
       - name: Build Azure Node application
         env:
-         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-         SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build:azure
- 
 
       - name: Verify Azure build output
         run: |
-          echo "Checking Nitro Node server output..."
-
           if [ ! -f ".output/server/index.mjs" ]; then
             echo "ERROR: .output/server/index.mjs was not created."
-            echo "Available build files:"
-            find . -maxdepth 5 -type f | sort
             exit 1
           fi
 
-          echo "Azure Node server output confirmed:"
-          find .output -maxdepth 5 -type f -print
+          echo "Azure server output exists."
+
+      - name: Verify Supabase URL was embedded
+        run: |
+          if grep -R -q "supabase.co" .output/public; then
+            echo "Supabase URL was embedded in the browser bundle."
+          else
+            echo "ERROR: Supabase URL was not embedded in .output/public."
+            exit 1
+          fi
 
       - name: Prepare deployment package
         run: |
-          mkdir deployment
+          rm -rf deployment
+          mkdir -p deployment
 
           cp -R .output deployment/.output
           cp package.json deployment/package.json
           cp package-lock.json deployment/package-lock.json
 
-          echo "Deployment package contents:"
-          find deployment -maxdepth 5 -type f -print
+          echo "Deployment package prepared."
+          find deployment -maxdepth 4 -type f -print
 
       - name: Upload deployment artifact
         uses: actions/upload-artifact@v4
@@ -102,13 +110,12 @@ jobs:
 
       - name: Verify downloaded package
         run: |
-          echo "Downloaded deployment files:"
-          find deployment -maxdepth 5 -type f -print
-
           if [ ! -f "deployment/.output/server/index.mjs" ]; then
             echo "ERROR: deployment/.output/server/index.mjs is missing."
             exit 1
           fi
+
+          echo "Deployment package verified."
 
       - name: Sign in to Azure
         uses: azure/login@v2
