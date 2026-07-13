@@ -9,21 +9,27 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   const supabaseUrl =
-    process.env.SUPABASE_URL || env.SUPABASE_URL;
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    env.VITE_SUPABASE_URL ||
+    env.SUPABASE_URL;
 
   const supabasePublishableKey =
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
+    env.VITE_SUPABASE_PUBLISHABLE_KEY ||
     env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !supabasePublishableKey) {
     throw new Error(
-      "Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY during Azure build.",
+      "Missing Supabase environment variables during Azure build.",
     );
   }
 
   return {
     plugins: [
       tsconfigPaths(),
+
       tailwindcss(),
 
       tanstackStart({
@@ -39,17 +45,15 @@ export default defineConfig(({ mode }) => {
       react(),
     ],
 
-    /*
-     * The existing application code reads:
-     *
-     * process.env.SUPABASE_URL
-     * process.env.SUPABASE_PUBLISHABLE_KEY
-     *
-     * Vite does not expose these automatically to browser code,
-     * so we inject their build-time values explicitly.
-     */
     define: {
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
+
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+        supabasePublishableKey,
+      ),
+
       "process.env.SUPABASE_URL": JSON.stringify(supabaseUrl),
+
       "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
         supabasePublishableKey,
       ),
@@ -68,6 +72,7 @@ export default defineConfig(({ mode }) => {
     preview: {
       host: "0.0.0.0",
       port: 3000,
+
       allowedHosts: [
         "xb.dad-ai.online",
         "money.dad-ai.online",
