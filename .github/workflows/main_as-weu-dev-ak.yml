@@ -28,7 +28,11 @@ jobs:
         run: npm ci
 
       - name: Build Azure Node application
+        env:
+         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+         SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build:azure
+ 
 
       - name: Verify Azure build output
         run: |
