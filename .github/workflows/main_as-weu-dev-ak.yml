@@ -1,4 +1,4 @@
-name: Inspect TanStack build output
+name: Build and deploy TanStack Start app to Azure Web App - AS-WEU-DEV-AK
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  inspect-build:
+  build:
     runs-on: ubuntu-latest
 
     permissions:
@@ -27,13 +27,77 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build application
-        run: npm run build
+      - name: Build Azure Node application
+        run: npm run build:azure
 
-      - name: Show build output
+      - name: Verify Azure build output
         run: |
-          echo "===== DIST DIRECTORIES ====="
-          find dist -maxdepth 6 -type d -print
+          echo "Checking Nitro Node server output..."
 
-          echo "===== DIST FILES ====="
-          find dist -maxdepth 6 -type f -print
+          if [ ! -f ".output/server/index.mjs" ]; then
+            echo "ERROR: .output/server/index.mjs was not created."
+            echo "Available build files:"
+            find . -maxdepth 4 -type f | sort
+            exit 1
+          fi
+
+          echo "Azure Node server output confirmed:"
+          find .output -maxdepth 4 -type f -print
+
+      - name: Prepare deployment package
+        run: |
+          mkdir deployment
+
+          cp -R .output deployment/.output
+          cp package.json deployment/package.json
+          cp package-lock.json deployment/package-lock.json
+
+          echo "Deployment package contents:"
+          find deployment -maxdepth 5 -type f -print
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tanstack-azure-package
+          path: deployment
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tanstack-azure-package
+          path: deployment
+
+      - name: Verify downloaded package
+        run: |
+          echo "Downloaded deployment files:"
+          find deployment -maxdepth 5 -type f -print
+
+          if [ ! -f "deployment/.output/server/index.mjs" ]; then
+            echo "ERROR: deployment/.output/server/index.mjs is missing."
+            exit 1
+          fi
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6E569F2ACF584FEBAC832276F6D5BB95 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F9A3FB25F726432EBCDC9CC642824FE9 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6EE5F30B8542409FB35E5BD2F91C2951 }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: "AS-WEU-DEV-AK"
+          slot-name: "Production"
+          package: ./deployment
