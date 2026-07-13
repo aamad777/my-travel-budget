@@ -15,8 +15,9 @@ function createSupabaseClient() {
         : []),
     ];
 
-    const message =
-      `Missing Supabase environment variable(s): ${missing.join(", ")}.`;
+    const message = `Missing Supabase environment variable(s): ${missing.join(
+      ", ",
+    )}.`;
 
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
@@ -40,8 +41,6 @@ let supabaseClient:
   | ReturnType<typeof createSupabaseClient>
   | undefined;
 
-// Import the Supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
 export const supabase = new Proxy(
   {} as ReturnType<typeof createSupabaseClient>,
   {
